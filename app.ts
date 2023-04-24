@@ -158,13 +158,14 @@ app.get("/:id", async function (req, res) {
   try {
     const reportParts = await retrieveReportParts(req.params.id);
     const reportContext = await retrieveContext(req.params.id);
-    if (!reportParts) {
+    if (!reportParts || !reportContext) {
       res.status(500);
       res.send("No report parts found.");
       return;
     }
+
     const fileMeta = await generatePdf(reportParts, reportContext);
-    await attachToReport(req.params.id, fileMeta.uri);
+    // await attachToReport(req.params.id, fileMeta.uri);
     res.send(fileMeta);
   } catch (e) {
     res.status(500);
