@@ -57,13 +57,14 @@ async function generatePdf(
 
 async function retrieveReportParts(
   reportId: string
-): Promise<ReportParts | null> {    
+): Promise<ReportParts | null> {
   const reportQuery = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX dossier: <https://data.vlaanderen.be/ns/dossier#>
-  PREFIX besluitvorming: <http://data.vlaanderen.be/ns/besluitvorming#>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX pav: <http://purl.org/pav/>
 
   SELECT * WHERE {
     ?s mu:uuid ${sparqlEscapeString(reportId)} .
@@ -71,6 +72,7 @@ async function retrieveReportParts(
  	  ?piecePart dct:isPartOf ?s .
     ?piecePart dct:title ?title .
     ?piecePart prov:value ?value .
+    FILTER(NOT EXISTS { [] pav:previousVersion ?piecePart }) .
   }
   `;
 
@@ -97,7 +99,7 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
   const dataQuery = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX dossier: <https://data.vlaanderen.be/ns/dossier#>
-  PREFIX besluitvorming: <http://data.vlaanderen.be/ns/besluitvorming#>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
   PREFIX besluit: <http://data.vlaanderen.be/ns/besluit#>
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
@@ -134,7 +136,7 @@ async function attachToReport(reportId: string, fileUri: string) {
   const queryString = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX dossier: <https://data.vlaanderen.be/ns/dossier#>
-  PREFIX besluitvorming: <http://data.vlaanderen.be/ns/besluitvorming#>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
 
@@ -158,6 +160,8 @@ app.get("/:id", async function (req, res) {
   try {
     const reportParts = await retrieveReportParts(req.params.id);
     const reportContext = await retrieveContext(req.params.id);
+    console.log(reportParts);
+    console.log(reportContext);
     if (!reportParts || !reportContext) {
       res.status(500);
       res.send("No report parts found.");
