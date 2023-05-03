@@ -4,7 +4,6 @@ import * as fs from "fs";
 
 export function createStyleHeader() {
   const styles = fs.readFileSync("/app/report-style.css").toString();
-  console.log(styles);
 
   return `
   <head>
