@@ -10,6 +10,7 @@ import {
 } from "mu";
 import { createFile, FileMeta, FileMetaNoUri } from "./file";
 import { STORAGE_PATH, STORAGE_URI } from "./config";
+import sanitizeHtml from "sanitize-html";
 
 export interface ReportParts {
   concerns: string;
@@ -131,6 +132,14 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
   };
 }
 
+function sanitizeReportParts(reportParts: ReportParts): ReportParts {
+  const { concerns, decision } = reportParts;
+  return {
+    concerns: sanitizeHtml(concerns, sanitizeHtml.defaults),
+    decision: sanitizeHtml(decision, sanitizeHtml.defaults),
+  };
+}
+
 async function attachToReport(reportId: string, fileUri: string) {
   // Update this function so it works with versioning
   const queryString = `
@@ -166,7 +175,8 @@ app.get("/:id", async function (req, res) {
       return;
     }
 
-    const fileMeta = await generatePdf(reportParts, reportContext);
+    const sanitizedParts = sanitizeReportParts(reportParts);
+    const fileMeta = await generatePdf(sanitizedParts, reportContext);
     // await attachToReport(req.params.id, fileMeta.uri);
     res.send(fileMeta);
   } catch (e) {
