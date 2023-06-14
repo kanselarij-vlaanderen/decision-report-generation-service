@@ -178,7 +178,10 @@ app.get("/:id", async function (req, res) {
     const sanitizedParts = sanitizeReportParts(reportParts);
     const fileMeta = await generatePdf(sanitizedParts, reportContext);
     // await attachToReport(req.params.id, fileMeta.uri);
-    res.send(fileMeta);
+    if (fileMeta) {
+      res.send(fileMeta);
+    }
+    throw new Error('Something went wrong while generating the pdf')
   } catch (e) {
     res.status(500);
     console.error(e);
