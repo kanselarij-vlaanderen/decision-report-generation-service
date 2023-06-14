@@ -1,7 +1,12 @@
 body {
-  /* color: red;
-  text-decoration: underline; */
+  padding: 20mm;
+  margin: 10mm auto;
   font-family: "flanders-sans";
+}
+
+@page {
+    size: A4;
+    margin: 0;
 }
 
 @font-face {
