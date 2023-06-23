@@ -34,6 +34,9 @@ async function generatePdf(
   const options: htmlPdf.CreateOptions = {
     host: "chrome-browser",
     port: 9222,
+    printOptions: {
+      preferCSSPageSize: true,
+    },
   };
 
   const uuid = generateUuid();
