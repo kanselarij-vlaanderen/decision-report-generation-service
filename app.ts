@@ -11,6 +11,8 @@ import {
 import { createFile, FileMeta, FileMetaNoUri } from "./file";
 import { STORAGE_PATH, STORAGE_URI } from "./config";
 import sanitizeHtml from "sanitize-html";
+import *  as fs from "fs";
+import fetch from "node-fetch";
 
 export interface ReportParts {
   concerns: string;
@@ -44,19 +46,38 @@ async function generatePdf(
   const filePath = `${STORAGE_PATH}/${fileName}`;
 
   const html = renderReport(reportParts, reportContext);
-  const pdf = await htmlPdf.create(`${createStyleHeader()}${html}`, options);
-  const fileMeta: FileMetaNoUri = {
-    name: fileName,
-    extension: "pdf",
-    size: pdf.toBuffer().buffer.byteLength,
-    created: new Date(),
-    format: "application/pdf",
-    id: uuid,
-  };
+  const htmlString = `${createStyleHeader()}${html}`;
 
-  await pdf.toFile(filePath);
+  const response = await fetch(
+    "http://html-to-pdf/generate",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/html",
+      },
+      body: htmlString,
+    }
+  );
 
-  return await createFile(fileMeta, `${STORAGE_URI}${fileMeta.name}`);
+  if (response.ok) {
+    const buffer = await response.buffer();
+    const fileMeta: FileMetaNoUri = {
+      name: fileName,
+      extension: "pdf",
+      size: buffer.byteLength,
+      created: new Date(),
+      format: "application/pdf",
+      id: uuid,
+    };
+    fs.writeFileSync(filePath, buffer);
+    return await createFile(fileMeta, `${STORAGE_URI}${fileMeta.name}`);
+  } else {
+    if (response.headers['Content-Type'] === 'application/vnd.api+json') {
+      const errorResponse = await response.json();
+      console.log('Rendering PDF returned the following error response: ', errorResponse);
+    }
+    throw new Error('Something went wrong while generating the pdf')
+  }
 }
 
 async function retrieveReportParts(
@@ -183,8 +204,9 @@ app.get("/:id", async function (req, res) {
     // await attachToReport(req.params.id, fileMeta.uri);
     if (fileMeta) {
       res.send(fileMeta);
+    } else {
+      throw new Error('Something went wrong while generating the pdf')
     }
-    throw new Error('Something went wrong while generating the pdf')
   } catch (e) {
     res.status(500);
     console.error(e);

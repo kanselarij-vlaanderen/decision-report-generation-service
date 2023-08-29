@@ -6,7 +6,8 @@
   "type": "module",
   "dependencies": {
     "html-pdf-chrome": "0.8.4",
-    "sanitize-html": "2.10.0"
+    "sanitize-html": "2.10.0",
+    "node-fetch": "3.3.2"
   },
   "devDependencies": {
     "@types/sanitize-html": "2.9.0"
