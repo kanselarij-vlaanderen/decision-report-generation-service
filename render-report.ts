@@ -16,7 +16,7 @@ export function createStyleHeader() {
 export function renderReport(
   reportParts: ReportParts,
   reportContext: ReportContext,
-  secretary: Secretary
+  secretary: Secretary | null
 ) {
   const { meeting, agendaItemNumber } = reportContext;
   const { plannedStart, numberRepresentation } = meeting;

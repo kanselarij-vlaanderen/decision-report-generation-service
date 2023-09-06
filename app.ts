@@ -40,7 +40,7 @@ export type Secretary = {
 async function generatePdf(
   reportParts: ReportParts,
   reportContext: ReportContext,
-  secretary: Secretary,
+  secretary: Secretary | null,
 ): Promise<FileMeta> {
   const options: htmlPdf.CreateOptions = {
     host: "chrome-browser",
@@ -110,7 +110,7 @@ async function retrieveReportParts(
   };
 }
 
-async function retrieveReportSecretary(reportId: string): Promise<Secretary> {
+async function retrieveReportSecretary(reportId: string): Promise<Secretary | null> {
     const dataQuery = `
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
@@ -142,7 +142,7 @@ async function retrieveReportSecretary(reportId: string): Promise<Secretary> {
         title: result.title.value,
       };
     }
-    return;
+    return null;
   }
 
 async function retrieveContext(reportId: string): Promise<ReportContext> {
