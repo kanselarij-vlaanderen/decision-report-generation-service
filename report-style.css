@@ -39,3 +39,12 @@ p {
   margin: 0;
   margin-bottom: 8pt;
 }
+
+h3 {
+  margin-bottom: 1mm;
+}
+
+.signature {
+  margin-top: 6rem;
+  float: right;
+}

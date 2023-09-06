@@ -1,4 +1,4 @@
-import { ReportParts, Meeting, ReportContext } from "./app";
+import { ReportParts, Meeting, ReportContext, Secretary } from "./app";
 import { addLeadingZeros, formatDate } from "./utils";
 import * as fs from "fs";
 
@@ -15,11 +15,12 @@ export function createStyleHeader() {
 
 export function renderReport(
   reportParts: ReportParts,
-  reportContext: ReportContext
+  reportContext: ReportContext,
+  secretary: Secretary
 ) {
   const { meeting, agendaItemNumber } = reportContext;
   const { plannedStart, numberRepresentation } = meeting;
-  return `
+  let reportHtml = `
     <div lang="nl">
       <div>
         <div style="text-align: center;">
@@ -141,7 +142,18 @@ export function renderReport(
       <p>
         <span style="font-weight: 500; text-decoration: underline">Beslissing</span> :
       </p>
-      ${reportParts.decision}
-    </div>
-  `;
+      ${reportParts.decision}`;
+  if (secretary && secretary.person) {
+    reportHtml +=   `
+        <div class="signature">
+          <h3 style="font-weight: 500;">
+          ${secretary.person.firstName}
+          ${secretary.person.lastName.toUpperCase()},
+          </h3>
+          <p>${secretary.title}.</p>
+        </div>`;
+  }
+  reportHtml += `
+</div>`;
+  return reportHtml;
 }
