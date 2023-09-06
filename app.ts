@@ -27,9 +27,20 @@ export type ReportContext = {
   agendaItemNumber: number;
 };
 
+export interface Person {
+  firstName: string;
+  lastName: string;
+}
+
+export type Secretary = {
+  person: Person;
+  title: string;
+}
+
 async function generatePdf(
   reportParts: ReportParts,
-  reportContext: ReportContext
+  reportContext: ReportContext,
+  secretary: Secretary,
 ): Promise<FileMeta> {
   const options: htmlPdf.CreateOptions = {
     host: "chrome-browser",
@@ -43,7 +54,7 @@ async function generatePdf(
   const fileName = `${uuid}.pdf`;
   const filePath = `${STORAGE_PATH}/${fileName}`;
 
-  const html = renderReport(reportParts, reportContext);
+  const html = renderReport(reportParts, reportContext, secretary);
   const pdf = await htmlPdf.create(`${createStyleHeader()}${html}`, options);
   const fileMeta: FileMetaNoUri = {
     name: fileName,
@@ -98,6 +109,41 @@ async function retrieveReportParts(
     ).value.value,
   };
 }
+
+async function retrieveReportSecretary(reportId: string): Promise<Secretary> {
+    const dataQuery = `
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
+    PREFIX prov: <http://www.w3.org/ns/prov#>
+    PREFIX dct: <http://purl.org/dc/terms/>
+    PREFIX mandaat: <http://data.vlaanderen.be/ns/mandaat#>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX persoon: <https://data.vlaanderen.be/ns/persoon#>
+
+    SELECT DISTINCT ?lastName ?firstName ?title WHERE {
+      ?report mu:uuid ${sparqlEscapeString(reportId)} .
+      ?report a besluitvorming:Verslag .
+      ?report besluitvorming:beschrijft ?decisionActivity .
+      ?decisionActivity prov:wasAssociatedWith ?mandatee .
+      ?mandatee dct:title ?title .
+      ?mandatee mandaat:isBestuurlijkeAliasVan ?person .
+      ?person foaf:familyName ?lastName .
+      ?person persoon:gebruikteVoornaam ?firstName .
+    }
+    `;
+    const queryResult = await query(dataQuery);
+    if (queryResult.results && queryResult.results.bindings && queryResult.results.bindings.length) {
+      const result = queryResult.results.bindings[0];
+      return {
+        person: {
+          firstName: result.firstName.value,
+          lastName: result.lastName.value,
+        },
+        title: result.title.value,
+      };
+    }
+    return;
+  }
 
 async function retrieveContext(reportId: string): Promise<ReportContext> {
   const dataQuery = `
@@ -172,6 +218,7 @@ app.get("/:id", async function (req, res) {
   try {
     const reportParts = await retrieveReportParts(req.params.id);
     const reportContext = await retrieveContext(req.params.id);
+    const secretary = await retrieveReportSecretary(req.params.id);
     if (!reportParts || !reportContext) {
       res.status(500);
       res.send("No report parts found.");
@@ -179,10 +226,11 @@ app.get("/:id", async function (req, res) {
     }
 
     const sanitizedParts = sanitizeReportParts(reportParts);
-    const fileMeta = await generatePdf(sanitizedParts, reportContext);
-    // await attachToReport(req.params.id, fileMeta.uri);
+    const fileMeta = await generatePdf(sanitizedParts, reportContext, secretary);
+    // await attachToReport(req.params.id, fileMeta.uri); // TODO: we do this in frontend now. Why?
     if (fileMeta) {
       res.send(fileMeta);
+      return;
     }
     throw new Error('Something went wrong while generating the pdf')
   } catch (e) {
