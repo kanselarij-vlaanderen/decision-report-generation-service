@@ -228,7 +228,7 @@ app.get("/:id", async function (req, res) {
 
     const sanitizedParts = sanitizeReportParts(reportParts);
     const fileMeta = await generatePdf(sanitizedParts, reportContext, secretary);
-    // await attachToReport(req.params.id, fileMeta.uri);
+    // await attachToReport(req.params.id, fileMeta.uri); // TODO: we do this in frontend now. Why?
     if (fileMeta) {
       res.send(fileMeta);
       return;
