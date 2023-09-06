@@ -20,7 +20,7 @@ export function renderReport(
 ) {
   const { meeting, agendaItemNumber } = reportContext;
   const { plannedStart, numberRepresentation } = meeting;
-  return `
+  let reportHtml = `
     <div lang="nl">
       <div>
         <div style="display: flex;">
@@ -144,15 +144,19 @@ export function renderReport(
       >
         Beslissing:
       </h3>
-      ${reportParts.decision}
-      <div
-        class="signature">
-        <h3>
-        ${secretary.person.firstName}
-        ${secretary.person.lastName.toUpperCase()},
-        </h3>
-        <p>${secretary.title}.</p>
-      </div>
-    </div>
-  `;
+      ${reportParts.decision}`;
+  if (secretary && secretary.person) {
+    reportHtml +=   `
+        <div
+          class="signature">
+          <h3 style="font-weight: 500;">
+          ${secretary.person.firstName}
+          ${secretary.person.lastName.toUpperCase()},
+          </h3>
+          <p>${secretary.title}.</p>
+        </div>`;
+  }
+  reportHtml += `
+</div>`;
+  return reportHtml;
 }

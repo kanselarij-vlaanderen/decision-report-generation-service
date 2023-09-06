@@ -131,19 +131,18 @@ async function retrieveReportSecretary(reportId: string): Promise<Secretary> {
       ?person persoon:gebruikteVoornaam ?firstName .
     }
     `;
-    const {
-      results: {
-        bindings: [{ lastName, firstName, title }],
-      },
-    } = await query(dataQuery);
-    return {
-      person: {
-        firstName: firstName.value,
-        lastName: lastName.value,
-      },
-      title: title.value,
-    };
-
+    const queryResult = await query(dataQuery);
+    if (queryResult.results && queryResult.results.bindings && queryResult.results.bindings.length) {
+      const result = queryResult.results.bindings[0];
+      return {
+        person: {
+          firstName: result.firstName.value,
+          lastName: result.lastName.value,
+        },
+        title: result.title.value,
+      };
+    }
+    return;
   }
 
 async function retrieveContext(reportId: string): Promise<ReportContext> {
