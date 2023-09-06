@@ -231,6 +231,7 @@ app.get("/:id", async function (req, res) {
     // await attachToReport(req.params.id, fileMeta.uri);
     if (fileMeta) {
       res.send(fileMeta);
+      return;
     }
     throw new Error('Something went wrong while generating the pdf')
   } catch (e) {
