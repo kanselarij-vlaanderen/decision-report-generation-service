@@ -23,10 +23,10 @@ export function renderReport(
   let reportHtml = `
     <div lang="nl">
       <div>
-        <div style="display: flex;">
+        <div style="text-align: center;">
+          <br/>
           <svg
             class="logo"
-            style="align-self: center; margin: 0 auto;"
             viewBox="0 0 141.8 65.2"
             width="141.8"
             height="65.2"
@@ -120,39 +120,36 @@ export function renderReport(
               d="M16.542 15.141c.9.1 1.5 3 3.6 3.6 1.6.5 3.2.2 3.6 1.1-.7.4-.1 1.6.6 1.4.5-1.6.8-8.1-7.8-6.1m2.8 1.3c.1-.2.2 0 .4-.2s.5-.6.9-.7c.3-.1.7 0 .9.1.2 0 .1.5-.1.6-.3.2-1.1-.1-1.1.5 0 1 1.4 0 2.1 0 .5 2.4-3.7 1.7-3.1-.3"
             />
           </svg>
-        </div>
-        <div style="margin: 0 auto">
-          <p style="text-align: center; margin: 0 auto;" class="date-string">
+          <p>
             Vergadering van ${formatDate(plannedStart)}
           </p>
-          <hr class="logo-underline" />
+          <p>________________________________________</p>
+          <br/>
+          <br/>
         </div>
       </div>
-      <h3 style="text-decoration: underline;" class="decision-title">
+      <p style="font-weight: 500; text-decoration: underline;">
         ${numberRepresentation} - punt ${addLeadingZeros(agendaItemNumber, 4)}
-      </h3>
-      <h3
-        style="text-decoration: underline;"
-        class="auk-u-text-decoration-underline au-u-padding-top"
-      >
-        Betreft:
-      </h3>
+      </p>
+      <br/>
+
+      <p>
+        <span style="font-weight: 500; text-decoration: underline;">Betreft</span> :
+      </p>
       ${reportParts.concerns}
-      <h3
-        style="text-decoration: underline;"
-        class="auk-u-text-decoration-underline au-u-padding-top"
-      >
-        Beslissing:
-      </h3>
+      <br/>
+
+      <p>
+        <span style="font-weight: 500; text-decoration: underline">Beslissing</span> :
+      </p>
       ${reportParts.decision}`;
   if (secretary && secretary.person) {
     reportHtml +=   `
-        <div
-          class="signature">
-          <h3 style="font-weight: 500;">
+        <div class="signature">
+          <p style="font-weight: 500;">
           ${secretary.person.firstName}
           ${secretary.person.lastName.toUpperCase()},
-          </h3>
+          </p>
           <p>${secretary.title}.</p>
         </div>`;
   }
