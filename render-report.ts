@@ -146,10 +146,10 @@ export function renderReport(
   if (secretary && secretary.person) {
     reportHtml +=   `
         <div class="signature">
-          <h3 style="font-weight: 500;">
+          <p style="font-weight: 500;">
           ${secretary.person.firstName}
           ${secretary.person.lastName.toUpperCase()},
-          </h3>
+          </p>
           <p>${secretary.title}.</p>
         </div>`;
   }
