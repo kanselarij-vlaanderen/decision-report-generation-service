@@ -129,7 +129,7 @@ export function renderReport(
         </div>
       </div>
       <p style="font-weight: 500; text-decoration: underline;">
-        ${numberRepresentation} - punt ${addLeadingZeros(agendaItemNumber, 4)}
+      ${reportParts.concerns}
       </p>
       <br/>
 
