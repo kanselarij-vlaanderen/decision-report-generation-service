@@ -6,6 +6,7 @@ import {
   update,
   sparqlEscapeString,
   sparqlEscapeUri,
+  sparqlEscapeDate,
   uuid as generateUuid,
 } from "mu";
 import { createFile, FileMeta, FileMetaNoUri } from "./file";
@@ -28,6 +29,10 @@ export type ReportContext = {
   meeting: Meeting;
   agendaItemNumber: number;
 };
+
+export type ReportFile = {
+
+}
 
 export interface Person {
   firstName: string;
@@ -223,6 +228,7 @@ async function attachToReport(reportId: string, fileUri: string) {
     ?report prov:value ?document .
   } INSERT {
     ?report prov:value ${sparqlEscapeUri(fileUri)} .
+    ?report dct:modified ${sparqlEscapeDate(new Date())}
   } WHERE {
     ?report mu:uuid ${sparqlEscapeString(reportId)} .
     ?report a besluitvorming:Verslag .
@@ -235,28 +241,29 @@ async function attachToReport(reportId: string, fileUri: string) {
   await update(queryString);
 }
 
-app.get("/:id", async function (req, res) {
-  try {
-    const reportParts = await retrieveReportParts(req.params.id);
-    const reportContext = await retrieveContext(req.params.id);
-    const secretary = await retrieveReportSecretary(req.params.id);
-    if (!reportParts || !reportContext) {
+app.post("/generate", async function (req, res) {
+  
+  const reportIDs = req.body.reportIDs;
+  reportIDs.forEach(async reportID => {
+    try {  
+      const reportParts = await retrieveReportParts(reportID);
+      const reportContext = await retrieveContext(reportID);
+      const secretary = await retrieveReportSecretary(reportID);
+      if (!reportParts || !reportContext) {
+        res.status(500);
+        res.send("No report parts found.");
+        return;
+      }
+      const sanitizedParts = sanitizeReportParts(reportParts);
+      const fileMeta = await generatePdf(sanitizedParts, reportContext, secretary);
+      if (fileMeta) {
+        await attachToReport(reportID, fileMeta.uri);
+      }
+    } catch (e) {
       res.status(500);
-      res.send("No report parts found.");
-      return;
+      console.error(e);
+      res.send(e);
     }
-
-    const sanitizedParts = sanitizeReportParts(reportParts);
-    const fileMeta = await generatePdf(sanitizedParts, reportContext, secretary);
-    // await attachToReport(req.params.id, fileMeta.uri); // TODO: we do this in frontend now. Why?
-    if (fileMeta) {
-      res.send(fileMeta);
-      return;
-    }
-    throw new Error('Something went wrong while generating the pdf');
-  } catch (e) {
-    res.status(500);
-    console.error(e);
-    res.send(e);
-  }
+  }); 
+  res.sendStatus(200);
 });
