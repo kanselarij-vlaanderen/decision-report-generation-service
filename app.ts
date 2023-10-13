@@ -162,11 +162,7 @@ async function retrieveReportSecretary(
     }
     `;
   const queryResult = await query(dataQuery);
-  if (
-    queryResult.results &&
-    queryResult.results.bindings &&
-    queryResult.results.bindings.length
-  ) {
+  if (queryResult.results?.bindings?.length) {
     const result = queryResult.results.bindings[0];
     return {
       person: {
