@@ -114,7 +114,7 @@ async function retrieveReportParts(
     ?s a besluitvorming:Verslag .
  	  ?piecePart dct:isPartOf ?s .
     ?piecePart dct:title ?title .
-    ?piecePart prov:value ?value .
+    ?piecePart prov:value ?htmlContent .
     FILTER(NOT EXISTS { [] pav:previousVersion ?piecePart }) .
   }
   `;
@@ -130,11 +130,11 @@ async function retrieveReportParts(
     concerns: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Betreft"
-    ).value.value,
+    ).htmlContent.value,
     decision: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Beslissing"
-    ).value.value,
+    ).htmlContent.value,
   };
 }
 
