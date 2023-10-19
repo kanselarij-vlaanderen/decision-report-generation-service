@@ -127,6 +127,10 @@ async function retrieveReportParts(
   }
 
   return {
+    annotation: bindings.find(
+      (b: Record<"title", Record<"value", string>>) =>
+        b.title.value === "Annotatie"
+    ).htmlContent.value,
     concerns: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Betreft"
@@ -228,8 +232,9 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
 }
 
 function sanitizeReportParts(reportParts: ReportParts): ReportParts {
-  const { concerns, decision } = reportParts;
+  const { concerns, decision, annotation } = reportParts;
   return {
+    annotation: annotation ? sanitizeHtml(annotation, sanitizeHtml.defaults) : null,
     concerns: sanitizeHtml(concerns, sanitizeHtml.defaults),
     decision: sanitizeHtml(decision, sanitizeHtml.defaults),
   };

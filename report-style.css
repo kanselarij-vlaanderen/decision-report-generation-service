@@ -18,7 +18,7 @@
 
 body {
   font-family: "Flanders Art Sans";
-  font-size: 12pt;
+  font-size: 11pt;
   line-height: 1.8;
   font-variant-ligatures: none;
 }
@@ -39,7 +39,19 @@ p {
   margin: 0;
 }
 
+.part-title {
+  font-size: 12pt;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.annotation {
+  font-size: 8pt;
+}
+
 .signature {
+  font-size: 12pt;
   margin-top: 6rem;
+  margin-right: 6rem;
   float: right;
 }
