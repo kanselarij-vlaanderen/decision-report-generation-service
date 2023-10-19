@@ -13,13 +13,13 @@
 }
 
 @page :first {
-  margin-top: 4mm;
+  margin-top: 2mm;
 }
 
 body {
   font-family: "Flanders Art Sans";
   font-size: 12pt;
-  line-height: 1.5;
+  line-height: 1.8;
   font-variant-ligatures: none;
 }
 
@@ -37,7 +37,6 @@ body {
 
 p {
   margin: 0;
-  margin-bottom: 8pt;
 }
 
 .signature {

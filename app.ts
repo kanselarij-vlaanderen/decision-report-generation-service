@@ -12,8 +12,9 @@ import {
 import { createFile, FileMeta, FileMetaNoUri } from "./file";
 import { STORAGE_PATH, STORAGE_URI } from "./config";
 import sanitizeHtml from "sanitize-html";
-import *  as fs from "fs";
+import * as fs from "fs";
 import fetch from "node-fetch";
+import constants from "./constants";
 
 export interface ReportParts {
   concerns: string;
@@ -23,11 +24,17 @@ export interface ReportParts {
 export interface Meeting {
   plannedStart: Date;
   numberRepresentation: number;
+  kind: string;
 }
 
 export type ReportContext = {
   meeting: Meeting;
-  agendaItemNumber: number;
+  agendaItem: AgendaItem;
+};
+
+export type AgendaItem = {
+  number: number;
+  isAnnouncement: boolean;
 };
 
 export type ReportFile = {
@@ -42,12 +49,12 @@ export interface Person {
 export type Secretary = {
   person: Person;
   title: string;
-}
+};
 
 async function generatePdf(
   reportParts: ReportParts,
   reportContext: ReportContext,
-  secretary: Secretary | null,
+  secretary: Secretary | null
 ): Promise<FileMeta> {
   const options: htmlPdf.CreateOptions = {
     host: "chrome-browser",
@@ -64,16 +71,13 @@ async function generatePdf(
   const html = renderReport(reportParts, reportContext, secretary);
   const htmlString = `${createStyleHeader()}${html}`;
 
-  const response = await fetch(
-    "http://html-to-pdf/generate",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "text/html",
-      },
-      body: htmlString,
-    }
-  );
+  const response = await fetch("http://html-to-pdf/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/html",
+    },
+    body: htmlString,
+  });
 
   if (response.ok) {
     const buffer = await response.buffer();
@@ -88,11 +92,14 @@ async function generatePdf(
     fs.writeFileSync(filePath, buffer);
     return await createFile(fileMeta, `${STORAGE_URI}${fileMeta.name}`);
   } else {
-    if (response.headers['Content-Type'] === 'application/vnd.api+json') {
+    if (response.headers["Content-Type"] === "application/vnd.api+json") {
       const errorResponse = await response.json();
-      console.log('Rendering PDF returned the following error response: ', errorResponse);
+      console.log(
+        "Rendering PDF returned the following error response: ",
+        errorResponse
+      );
     }
-    throw new Error('Something went wrong while generating the pdf')
+    throw new Error("Something went wrong while generating the pdf");
   }
 }
 
@@ -136,8 +143,10 @@ async function retrieveReportParts(
   };
 }
 
-async function retrieveReportSecretary(reportId: string): Promise<Secretary | null> {
-    const dataQuery = `
+async function retrieveReportSecretary(
+  reportId: string
+): Promise<Secretary | null> {
+  const dataQuery = `
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
     PREFIX prov: <http://www.w3.org/ns/prov#>
@@ -157,19 +166,19 @@ async function retrieveReportSecretary(reportId: string): Promise<Secretary | nu
       ?person persoon:gebruikteVoornaam ?firstName .
     }
     `;
-    const queryResult = await query(dataQuery);
-    if (queryResult.results && queryResult.results.bindings && queryResult.results.bindings.length) {
-      const result = queryResult.results.bindings[0];
-      return {
-        person: {
-          firstName: result.firstName.value,
-          lastName: result.lastName.value,
-        },
-        title: result.title.value,
-      };
-    }
-    return null;
+  const queryResult = await query(dataQuery);
+  if (queryResult.results?.bindings?.length) {
+    const result = queryResult.results.bindings[0];
+    return {
+      person: {
+        firstName: result.firstName.value,
+        lastName: result.lastName.value,
+      },
+      title: result.title.value,
+    };
   }
+  return null;
+}
 
 async function retrieveContext(reportId: string): Promise<ReportContext> {
   const dataQuery = `
@@ -182,28 +191,44 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX schema: <http://schema.org/>
 
-  SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber WHERE {
+  SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?agendaItemType WHERE {
     ?report mu:uuid ${sparqlEscapeString(reportId)} .
     ?report a besluitvorming:Verslag .
     ?report besluitvorming:beschrijft/^besluitvorming:heeftBeslissing/dct:subject ?agendaItem .
     ?agendaItem ^dct:hasPart/besluitvorming:isAgendaVoor ?meeting .
     ?meeting ext:numberRepresentation ?numberRepresentation .
     ?meeting besluit:geplandeStart ?geplandeStart .
+    ?meeting dct:type ?meetingType .
     ?agendaItem schema:position ?agendaItemNumber .
+    ?agendaItem dct:type ?agendaItemType .
     FILTER(NOT EXISTS { [] prov:wasRevisionOf ?agendaItem })
   }
   `;
   const {
     results: {
-      bindings: [{ numberRepresentation, geplandeStart, agendaItemNumber }],
+      bindings: [
+        {
+          numberRepresentation,
+          geplandeStart,
+          agendaItemNumber,
+          agendaItemType,
+          meetingType,
+        },
+      ],
     },
   } = await query(dataQuery);
+
   return {
     meeting: {
       plannedStart: new Date(geplandeStart.value),
       numberRepresentation: numberRepresentation.value,
+      kind: meetingType.value,
     },
-    agendaItemNumber: agendaItemNumber.value,
+    agendaItem: {
+      number: agendaItemNumber.value,
+      isAnnouncement:
+        agendaItemType.value === constants.AGENDA_ITEM_TYPES.ANNOUNCEMENT,
+    },
   };
 }
 
