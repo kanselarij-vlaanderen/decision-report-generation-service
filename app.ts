@@ -37,8 +37,8 @@ export type AgendaItem = {
   isAnnouncement: boolean;
 };
 
-export type ReportFile = {
-
+export type File = {
+  id: string;
 }
 
 export interface Person {
@@ -50,6 +50,44 @@ export type Secretary = {
   person: Person;
   title: string;
 };
+
+async function deleteFile(requestHeaders, file: File) {
+  try {
+    const response = await fetch(`http://file/files/${file.id}`, {
+      method: "delete",
+      headers: requestHeaders,
+    });
+    if (!response.ok) {
+      throw new Error(`Something went wrong while removing the file: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error(`Could not delete file with id: ${file.id}. Error:`, error);
+  }
+}
+
+async function retrieveOldFile(reportId: string): Promise<File | null> {
+  const queryString = `
+  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
+  PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
+
+  select ?fileId WHERE {
+    ?report mu:uuid ${sparqlEscapeString(reportId)} .
+    ?report a besluitvorming:Verslag .
+    ?report prov:value ?file .
+    ?file a nfo:FileDataObject .
+    ?file mu:uuid ?fileId .
+  }
+  `;
+
+  const queryResult = await query(queryString);
+  if (queryResult.results?.bindings?.length) {
+    const result = queryResult.results.bindings[0];
+    return { id: result.fileId.value };
+  }
+  return null;
+}
 
 async function generatePdf(
   reportParts: ReportParts,
@@ -251,44 +289,49 @@ async function attachToReport(reportId: string, fileUri: string) {
 
   DELETE {
     ?report prov:value ?document .
+    ?report dct:modified ?modified .
   } INSERT {
     ?report prov:value ${sparqlEscapeUri(fileUri)} .
     ?report dct:modified ${sparqlEscapeDate(new Date())}
   } WHERE {
     ?report mu:uuid ${sparqlEscapeString(reportId)} .
     ?report a besluitvorming:Verslag .
-    OPTIONAL {
-      ?report prov:value ?document .
-    }
+    OPTIONAL { ?report dct:modified ?modified .}
+    OPTIONAL { ?report prov:value ?document .}
   }
   `;
 
   await update(queryString);
 }
 
-app.post("/generate", async function (req, res) {
-  
-  const reportIDs = req.body.reportIDs;
-  reportIDs.forEach(async reportID => {
-    try {  
-      const reportParts = await retrieveReportParts(reportID);
-      const reportContext = await retrieveContext(reportID);
-      const secretary = await retrieveReportSecretary(reportID);
-      if (!reportParts || !reportContext) {
-        res.status(500);
-        res.send("No report parts found.");
-        return;
-      }
-      const sanitizedParts = sanitizeReportParts(reportParts);
-      const fileMeta = await generatePdf(sanitizedParts, reportContext, secretary);
-      if (fileMeta) {
-        await attachToReport(reportID, fileMeta.uri);
-      }
-    } catch (e) {
+app.get("/:id", async function (req, res) {
+  try {
+    const reportParts = await retrieveReportParts(req.params.id);
+    const reportContext = await retrieveContext(req.params.id);
+    const secretary = await retrieveReportSecretary(req.params.id);
+    if (!reportParts || !reportContext) {
       res.status(500);
-      console.error(e);
-      res.send(e);
+      res.send("No report parts found.");
+      return;
     }
-  }); 
-  res.sendStatus(200);
+    const oldFile = await retrieveOldFile(req.params.id);
+    const sanitizedParts = sanitizeReportParts(reportParts);
+    const fileMeta = await generatePdf(
+      sanitizedParts,
+      reportContext,
+      secretary
+    );
+    if (fileMeta) {
+      await attachToReport(req.params.id, fileMeta.uri);
+      if (oldFile) {
+        await deleteFile(req.headers, oldFile);
+      }
+      return res.status(200).send(fileMeta);
+    }
+    throw new Error("Something went wrong while generating the pdf");
+  } catch (e) {
+    res.status(500);
+    console.error(e);
+    res.send(e);
+  }
 });
