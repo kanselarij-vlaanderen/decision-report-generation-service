@@ -6,7 +6,7 @@ import {
   update,
   sparqlEscapeString,
   sparqlEscapeUri,
-  sparqlEscapeDate,
+  sparqlEscapeDateTime,
   uuid as generateUuid,
 } from "mu";
 import { createFile, FileMeta, FileMetaNoUri } from "./file";
@@ -298,7 +298,7 @@ async function attachToReport(reportId: string, fileUri: string) {
     ?report dct:modified ?modified .
   } INSERT {
     ?report prov:value ${sparqlEscapeUri(fileUri)} .
-    ?report dct:modified ${sparqlEscapeDate(new Date())}
+    ?report dct:modified ${sparqlEscapeDateTime(new Date())}
   } WHERE {
     ?report mu:uuid ${sparqlEscapeString(reportId)} .
     ?report a besluitvorming:Verslag .
