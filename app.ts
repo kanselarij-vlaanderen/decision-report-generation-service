@@ -6,6 +6,7 @@ import {
   update,
   sparqlEscapeString,
   sparqlEscapeUri,
+  sparqlEscapeDateTime,
   uuid as generateUuid,
 } from "mu";
 import { createFile, FileMeta, FileMetaNoUri } from "./file";
@@ -16,6 +17,7 @@ import fetch from "node-fetch";
 import constants from "./constants";
 
 export interface ReportParts {
+  annotation: string;
   concerns: string;
   decision: string;
 }
@@ -36,6 +38,10 @@ export type AgendaItem = {
   isAnnouncement: boolean;
 };
 
+export type File = {
+  id: string;
+}
+
 export interface Person {
   firstName: string;
   lastName: string;
@@ -45,6 +51,44 @@ export type Secretary = {
   person: Person;
   title: string;
 };
+
+async function deleteFile(requestHeaders, file: File) {
+  try {
+    const response = await fetch(`http://file/files/${file.id}`, {
+      method: "delete",
+      headers: requestHeaders,
+    });
+    if (!response.ok) {
+      throw new Error(`Something went wrong while removing the file: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error(`Could not delete file with id: ${file.id}. Error:`, error);
+  }
+}
+
+async function retrieveOldFile(reportId: string): Promise<File | null> {
+  const queryString = `
+  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
+  PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
+
+  select ?fileId WHERE {
+    ?report mu:uuid ${sparqlEscapeString(reportId)} .
+    ?report a besluitvorming:Verslag .
+    ?report prov:value ?file .
+    ?file a nfo:FileDataObject .
+    ?file mu:uuid ?fileId .
+  }
+  `;
+
+  const queryResult = await query(queryString);
+  if (queryResult.results?.bindings?.length) {
+    const result = queryResult.results.bindings[0];
+    return { id: result.fileId.value };
+  }
+  return null;
+}
 
 async function generatePdf(
   reportParts: ReportParts,
@@ -130,7 +174,7 @@ async function retrieveReportParts(
     annotation: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Annotatie"
-    ).htmlContent.value,
+    )?.htmlContent?.value,
     concerns: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Betreft"
@@ -251,14 +295,15 @@ async function attachToReport(reportId: string, fileUri: string) {
 
   DELETE {
     ?report prov:value ?document .
+    ?report dct:modified ?modified .
   } INSERT {
     ?report prov:value ${sparqlEscapeUri(fileUri)} .
+    ?report dct:modified ${sparqlEscapeDateTime(new Date())}
   } WHERE {
     ?report mu:uuid ${sparqlEscapeString(reportId)} .
     ?report a besluitvorming:Verslag .
-    OPTIONAL {
-      ?report prov:value ?document .
-    }
+    OPTIONAL { ?report dct:modified ?modified .}
+    OPTIONAL { ?report prov:value ?document .}
   }
   `;
 
@@ -275,17 +320,19 @@ app.get("/:id", async function (req, res) {
       res.send("No report parts found.");
       return;
     }
-
+    const oldFile = await retrieveOldFile(req.params.id);
     const sanitizedParts = sanitizeReportParts(reportParts);
     const fileMeta = await generatePdf(
       sanitizedParts,
       reportContext,
       secretary
     );
-    // await attachToReport(req.params.id, fileMeta.uri); // TODO: we do this in frontend now. Why?
     if (fileMeta) {
-      res.send(fileMeta);
-      return;
+      await attachToReport(req.params.id, fileMeta.uri);
+      if (oldFile) {
+        await deleteFile(req.headers, oldFile);
+      }
+      return res.status(200).send(fileMeta);
     }
     throw new Error("Something went wrong while generating the pdf");
   } catch (e) {
