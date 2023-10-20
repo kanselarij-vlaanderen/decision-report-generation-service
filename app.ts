@@ -157,7 +157,7 @@ async function retrieveReportParts(
     ?s a besluitvorming:Verslag .
  	  ?piecePart dct:isPartOf ?s .
     ?piecePart dct:title ?title .
-    ?piecePart prov:value ?value .
+    ?piecePart prov:value ?htmlContent .
     FILTER(NOT EXISTS { [] pav:previousVersion ?piecePart }) .
   }
   `;
@@ -170,14 +170,18 @@ async function retrieveReportParts(
   }
 
   return {
+    annotation: bindings.find(
+      (b: Record<"title", Record<"value", string>>) =>
+        b.title.value === "Annotatie"
+    ).htmlContent.value,
     concerns: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Betreft"
-    ).value.value,
+    ).htmlContent.value,
     decision: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Beslissing"
-    ).value.value,
+    ).htmlContent.value,
   };
 }
 
@@ -271,8 +275,9 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
 }
 
 function sanitizeReportParts(reportParts: ReportParts): ReportParts {
-  const { concerns, decision } = reportParts;
+  const { concerns, decision, annotation } = reportParts;
   return {
+    annotation: annotation ? sanitizeHtml(annotation, sanitizeHtml.defaults) : null,
     concerns: sanitizeHtml(concerns, sanitizeHtml.defaults),
     decision: sanitizeHtml(decision, sanitizeHtml.defaults),
   };
