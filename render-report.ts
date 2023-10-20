@@ -46,7 +46,13 @@ export function renderReport(
   const { meeting, agendaItem } = reportContext;
   const { number: agendaItemNumber, isAnnouncement } = agendaItem;
   const { numberRepresentation } = meeting;
-  let reportHtml = ` 
+  let annotationHtml = `<br />
+  <br />`;
+  if (reportParts.annotation) {
+    annotationHtml = `<p id="annotation">${reportParts.annotation}</p>
+    <br />`
+  }
+  let reportHtml = `
   <div lang="nl">
     <div>
       <div style="text-align: center;">
@@ -145,30 +151,26 @@ export function renderReport(
             class="st0"
             d="M16.542 15.141c.9.1 1.5 3 3.6 3.6 1.6.5 3.2.2 3.6 1.1-.7.4-.1 1.6.6 1.4.5-1.6.8-8.1-7.8-6.1m2.8 1.3c.1-.2.2 0 .4-.2s.5-.6.9-.7c.3-.1.7 0 .9.1.2 0 .1.5-.1.6-.3.2-1.1-.1-1.1.5 0 1 1.4 0 2.1 0 .5 2.4-3.7 1.7-3.1-.3"
           />
-        </svg>
-        <p>${meetingKindTitle(meeting)}</p>
-        <p>________________________________________</p>
-        <br />
-        <br />
-      </div>
+      </svg>
+      <p style="font-size: 12pt;">${meetingKindTitle(meeting)}</p>
+      <p>________________________________________</p>
     </div>
-    <p style="font-weight: 500; text-decoration: underline;">
+    ${annotationHtml}
+    <p style="font-weight: 500; text-decoration: underline; font-size: 12pt;">
       ${numberRepresentation} - ${isAnnouncement ? "mededeling" : "punt"}
       ${addLeadingZeros(agendaItemNumber, 4)}
     </p>
     <br />
 
     <p>
-      <span style="font-weight: 500; text-decoration: underline;">Betreft</span>
+      <span class="part-title">Betreft</span>
       :
     </p>
     ${reportParts.concerns}
     <br />
 
     <p>
-      <span style="font-weight: 500; text-decoration: underline"
-        >Beslissing</span
-      >
+      <span class="part-title">Beslissing</span>
       :
     </p>
     ${reportParts.decision}
@@ -181,6 +183,8 @@ export function renderReport(
           ${secretary.person.lastName.toUpperCase()},
           </p>
           <p>${secretary.title}.</p>
+          <br />
+          <br />
         </div>`;
   }
   reportHtml += `
