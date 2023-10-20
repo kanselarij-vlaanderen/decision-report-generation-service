@@ -17,6 +17,7 @@ import fetch from "node-fetch";
 import constants from "./constants";
 
 export interface ReportParts {
+  annotation: string;
   concerns: string;
   decision: string;
 }
@@ -173,7 +174,7 @@ async function retrieveReportParts(
     annotation: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Annotatie"
-    ).htmlContent.value,
+    )?.htmlContent?.value,
     concerns: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Betreft"
