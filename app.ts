@@ -1,4 +1,3 @@
-import * as htmlPdf from "html-pdf-chrome";
 import { renderReport, createStyleHeader } from "./render-report";
 import {
   app,
@@ -9,8 +8,8 @@ import {
   sparqlEscapeDateTime,
   uuid as generateUuid,
 } from "mu";
-import { createFile, FileMeta, FileMetaNoUri } from "./file";
-import { STORAGE_PATH, STORAGE_URI } from "./config";
+import { createFile, PhysicalFile, VirtualFile } from "./file";
+import { RESOURCE_BASE, STORAGE_PATH } from "./config";
 import sanitizeHtml from "sanitize-html";
 import * as fs from "fs";
 import fetch from "node-fetch";
@@ -51,6 +50,16 @@ export type Secretary = {
   person: Person;
   title: string;
 };
+
+function generateReportName(reportContext: ReportContext): string {
+  const { meeting, agendaItem } = reportContext;
+
+  const meetingNumber = meeting.numberRepresentation;
+  const agendaitemType = agendaItem.isAnnouncement ? 'mededeling' : 'punt';
+  const agendaitemNumber = String(agendaItem.number).padStart(4, '0');
+
+  return `${meetingNumber} - ${agendaitemType} ${agendaitemNumber}.pdf`.replace('/', '-');
+}
 
 async function deleteFile(requestHeaders, file: File) {
   try {
@@ -94,22 +103,9 @@ async function generatePdf(
   reportParts: ReportParts,
   reportContext: ReportContext,
   secretary: Secretary | null
-): Promise<FileMeta> {
-  const options: htmlPdf.CreateOptions = {
-    host: "chrome-browser",
-    port: 9222,
-    printOptions: {
-      preferCSSPageSize: true,
-    },
-  };
-
-  const uuid = generateUuid();
-  const fileName = `${uuid}.pdf`;
-  const filePath = `${STORAGE_PATH}/${fileName}`;
-
+): Promise<VirtualFile> {
   const html = renderReport(reportParts, reportContext, secretary);
   const htmlString = `${createStyleHeader()}${html}`;
-
   const response = await fetch("http://html-to-pdf/generate", {
     method: "POST",
     headers: {
@@ -120,16 +116,37 @@ async function generatePdf(
 
   if (response.ok) {
     const buffer = await response.buffer();
-    const fileMeta: FileMetaNoUri = {
+
+    const now = new Date();
+    const physicalUuid = generateUuid();
+    const physicalName = `${physicalUuid}.pdf`
+    const filePath = `${STORAGE_PATH}/${physicalName}`;
+
+    const physicalFile: PhysicalFile = {
+      id: physicalUuid,
+      uri: filePath.replace('/share/', 'share://'),
+      name: physicalName,
+      extension: "pdf",
+      size: buffer.byteLength,
+      created: now,
+      format: "application/pdf",
+    };
+
+    const virtualUuid = generateUuid();
+    const fileName = generateReportName(reportContext);
+    const file: VirtualFile =   {
+      id: virtualUuid,
+      uri: `${RESOURCE_BASE}/files/${virtualUuid}`,
       name: fileName,
       extension: "pdf",
       size: buffer.byteLength,
-      created: new Date(),
+      created: now,
       format: "application/pdf",
-      id: uuid,
+      physicalFile,
     };
     fs.writeFileSync(filePath, buffer);
-    return await createFile(fileMeta, `${STORAGE_URI}${fileMeta.name}`);
+    await createFile(file);
+    return file;
   } else {
     if (response.headers["Content-Type"] === "application/vnd.api+json") {
       const errorResponse = await response.json();
