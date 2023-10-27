@@ -1,4 +1,3 @@
-import * as htmlPdf from "html-pdf-chrome";
 import { renderReport, createStyleHeader } from "./render-report";
 import {
   app,
@@ -6,16 +5,18 @@ import {
   update,
   sparqlEscapeString,
   sparqlEscapeUri,
+  sparqlEscapeDateTime,
   uuid as generateUuid,
 } from "mu";
-import { createFile, FileMeta, FileMetaNoUri } from "./file";
-import { STORAGE_PATH, STORAGE_URI } from "./config";
+import { createFile, PhysicalFile, VirtualFile } from "./file";
+import { RESOURCE_BASE, STORAGE_PATH } from "./config";
 import sanitizeHtml from "sanitize-html";
 import * as fs from "fs";
 import fetch from "node-fetch";
 import constants from "./constants";
 
 export interface ReportParts {
+  annotation: string;
   concerns: string;
   decision: string;
 }
@@ -36,6 +37,10 @@ export type AgendaItem = {
   isAnnouncement: boolean;
 };
 
+export type File = {
+  id: string;
+}
+
 export interface Person {
   firstName: string;
   lastName: string;
@@ -46,26 +51,61 @@ export type Secretary = {
   title: string;
 };
 
+function generateReportName(reportContext: ReportContext): string {
+  const { meeting, agendaItem } = reportContext;
+
+  const meetingNumber = meeting.numberRepresentation;
+  const agendaitemType = agendaItem.isAnnouncement ? 'mededeling' : 'punt';
+  const agendaitemNumber = String(agendaItem.number).padStart(4, '0');
+
+  return `${meetingNumber} - ${agendaitemType} ${agendaitemNumber}.pdf`.replace('/', '-');
+}
+
+async function deleteFile(requestHeaders, file: File) {
+  try {
+    const response = await fetch(`http://file/files/${file.id}`, {
+      method: "delete",
+      headers: requestHeaders,
+    });
+    if (!response.ok) {
+      throw new Error(`Something went wrong while removing the file: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error(`Could not delete file with id: ${file.id}. Error:`, error);
+  }
+}
+
+async function retrieveOldFile(reportId: string): Promise<File | null> {
+  const queryString = `
+  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
+  PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
+
+  select ?fileId WHERE {
+    ?report mu:uuid ${sparqlEscapeString(reportId)} .
+    ?report a besluitvorming:Verslag .
+    ?report prov:value ?file .
+    ?file a nfo:FileDataObject .
+    ?file mu:uuid ?fileId .
+  }
+  `;
+
+  const queryResult = await query(queryString);
+  if (queryResult.results?.bindings?.length) {
+    const result = queryResult.results.bindings[0];
+    return { id: result.fileId.value };
+  }
+  return null;
+}
+
 async function generatePdf(
   reportParts: ReportParts,
   reportContext: ReportContext,
   secretary: Secretary | null
-): Promise<FileMeta> {
-  const options: htmlPdf.CreateOptions = {
-    host: "chrome-browser",
-    port: 9222,
-    printOptions: {
-      preferCSSPageSize: true,
-    },
-  };
-
-  const uuid = generateUuid();
-  const fileName = `${uuid}.pdf`;
-  const filePath = `${STORAGE_PATH}/${fileName}`;
-
+): Promise<VirtualFile> {
   const html = renderReport(reportParts, reportContext, secretary);
   const htmlString = `${createStyleHeader()}${html}`;
-
   const response = await fetch("http://html-to-pdf/generate", {
     method: "POST",
     headers: {
@@ -76,16 +116,37 @@ async function generatePdf(
 
   if (response.ok) {
     const buffer = await response.buffer();
-    const fileMeta: FileMetaNoUri = {
+
+    const now = new Date();
+    const physicalUuid = generateUuid();
+    const physicalName = `${physicalUuid}.pdf`
+    const filePath = `${STORAGE_PATH}/${physicalName}`;
+
+    const physicalFile: PhysicalFile = {
+      id: physicalUuid,
+      uri: filePath.replace('/share/', 'share://'),
+      name: physicalName,
+      extension: "pdf",
+      size: buffer.byteLength,
+      created: now,
+      format: "application/pdf",
+    };
+
+    const virtualUuid = generateUuid();
+    const fileName = generateReportName(reportContext);
+    const file: VirtualFile =   {
+      id: virtualUuid,
+      uri: `${RESOURCE_BASE}/files/${virtualUuid}`,
       name: fileName,
       extension: "pdf",
       size: buffer.byteLength,
-      created: new Date(),
+      created: now,
       format: "application/pdf",
-      id: uuid,
+      physicalFile,
     };
     fs.writeFileSync(filePath, buffer);
-    return await createFile(fileMeta, `${STORAGE_URI}${fileMeta.name}`);
+    await createFile(file);
+    return file;
   } else {
     if (response.headers["Content-Type"] === "application/vnd.api+json") {
       const errorResponse = await response.json();
@@ -130,7 +191,7 @@ async function retrieveReportParts(
     annotation: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Annotatie"
-    ).htmlContent.value,
+    )?.htmlContent?.value,
     concerns: bindings.find(
       (b: Record<"title", Record<"value", string>>) =>
         b.title.value === "Betreft"
@@ -280,14 +341,15 @@ async function attachToReport(reportId: string, fileUri: string) {
 
   DELETE {
     ?report prov:value ?document .
+    ?report dct:modified ?modified .
   } INSERT {
     ?report prov:value ${sparqlEscapeUri(fileUri)} .
+    ?report dct:modified ${sparqlEscapeDateTime(new Date())}
   } WHERE {
     ?report mu:uuid ${sparqlEscapeString(reportId)} .
     ?report a besluitvorming:Verslag .
-    OPTIONAL {
-      ?report prov:value ?document .
-    }
+    OPTIONAL { ?report dct:modified ?modified .}
+    OPTIONAL { ?report prov:value ?document .}
   }
   `;
 
@@ -312,16 +374,19 @@ app.get("/:id", async function (req, res) {
       return;
     }
 
+    const oldFile = await retrieveOldFile(req.params.id);
     const sanitizedParts = sanitizeReportParts(reportParts);
     const fileMeta = await generatePdf(
       sanitizedParts,
       reportContext,
       secretary
     );
-    // await attachToReport(req.params.id, fileMeta.uri); // TODO: we do this in frontend now. Why?
     if (fileMeta) {
-      res.send(fileMeta);
-      return;
+      await attachToReport(req.params.id, fileMeta.uri);
+      if (oldFile) {
+        await deleteFile(req.headers, oldFile);
+      }
+      return res.status(200).send(fileMeta);
     }
     throw new Error("Something went wrong while generating the pdf");
   } catch (e) {
