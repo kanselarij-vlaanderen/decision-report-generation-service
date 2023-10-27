@@ -231,6 +231,35 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
   };
 }
 
+async function retrieveSignFlowStatus(
+  reportId: string
+): Promise<string | undefined> {
+  const dataQuery = `
+  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+  PREFIX sign: <http://mu.semte.ch/vocabularies/ext/handtekenen/>
+  PREFIX adms: <http://www.w3.org/ns/adms#>
+
+  SELECT DISTINCT ?report ?signFlow ?status WHERE {
+    ?report mu:uuid ${sparqlEscapeString(reportId)}
+    OPTIONAL {
+      ?signMarkingActivity sign:gemarkeerdStuk ?report .
+      ?signMarkingActivity sign:markeringVindtPlaatsTijdens ?signSubcase .
+      ?signFlow sign:doorlooptHandtekening ?signSubcase .
+      ?signFlow adms:status ?status .
+    }
+  }
+  `;
+  const queryResult = await query(dataQuery);
+  if (
+    queryResult.results &&
+    queryResult.results.bindings &&
+    queryResult.results.bindings.length
+  ) {
+    const result = queryResult.results.bindings[0];
+    return result?.status?.value;
+  }
+}
+
 function sanitizeReportParts(reportParts: ReportParts): ReportParts {
   const { concerns, decision, annotation } = reportParts;
   return {
@@ -270,9 +299,16 @@ app.get("/:id", async function (req, res) {
     const reportParts = await retrieveReportParts(req.params.id);
     const reportContext = await retrieveContext(req.params.id);
     const secretary = await retrieveReportSecretary(req.params.id);
+    const signFlowStatus = await retrieveSignFlowStatus(req.params.id)
     if (!reportParts || !reportContext) {
       res.status(500);
       res.send("No report parts found.");
+      return;
+    }
+
+    if (signFlowStatus && signFlowStatus !== "http://themis.vlaanderen.be/id/handtekenstatus/f6a60072-0537-11ee-bb35-ee395168dcf7") {
+      res.status(500);
+      res.send("Cannot edit reports that have signatures.");
       return;
     }
 
