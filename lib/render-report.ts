@@ -1,10 +1,10 @@
-import { ReportParts, Meeting, ReportContext, Secretary } from "./app";
-import constants from "./constants";
+import { ReportParts, Meeting, ReportContext, Secretary } from "../app";
+import constants from "../constants";
 import { addLeadingZeros, formatDate } from "./utils";
 import * as fs from "fs";
 
 export function createStyleHeader() {
-  const styles = fs.readFileSync("/app/report-style.css").toString();
+  const styles = fs.readFileSync("/app/style/report-style.css").toString();
 
   return `
   <head>
