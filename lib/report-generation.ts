@@ -29,6 +29,7 @@ export interface Meeting {
 export type ReportContext = {
   meeting: Meeting;
   agendaItem: AgendaItem;
+  accessLevel: string;
 };
 
 export type AgendaItem = {
@@ -250,10 +251,11 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX schema: <http://schema.org/>
 
-  SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?agendaItemType WHERE {
+  SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?agendaItemType ?accessLevel WHERE {
     ?report mu:uuid ${sparqlEscapeString(reportId)} .
     ?report a besluitvorming:Verslag .
     ?report besluitvorming:beschrijft/^besluitvorming:heeftBeslissing/dct:subject ?agendaItem .
+    ?report besluitvorming:vertrouwelijkheidsniveau ?accessLevel .
     ?agendaItem ^dct:hasPart/besluitvorming:isAgendaVoor ?meeting .
     ?meeting ext:numberRepresentation ?numberRepresentation .
     ?meeting besluit:geplandeStart ?geplandeStart .
@@ -272,6 +274,7 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
           agendaItemNumber,
           agendaItemType,
           meetingType,
+          accessLevel
         },
       ],
     },
@@ -288,6 +291,7 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
       isAnnouncement:
         agendaItemType.value === constants.AGENDA_ITEM_TYPES.ANNOUNCEMENT,
     },
+    accessLevel: accessLevel?.value
   };
 }
 
