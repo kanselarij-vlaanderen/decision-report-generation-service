@@ -39,6 +39,17 @@ p {
   margin: 0;
 }
 
+table {
+  border: 1px solid black;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table td {
+  border: 1px solid black;
+  padding: 0.6rem;
+}
+
 .part-title {
   font-size: 12pt;
   font-weight: 500;
