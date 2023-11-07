@@ -1,4 +1,5 @@
-import { querySudo as query, updateSudo as update } from '@lblod/mu-auth-sudo';
+import { query, update } from 'mu';
+import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { sparqlEscapeString, sparqlEscapeUri, sparqlEscapeDateTime, sparqlEscapeInt, uuid } from 'mu';
 import config from '../config';
 
@@ -80,7 +81,7 @@ export async function createJob(reportUris, requestHeaders) {
 }
 
 async function getReportIds(job) {
-  const result = await query(`
+  const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
@@ -103,7 +104,7 @@ async function getReportIds(job) {
 }
 
 async function getNextScheduledJob() {
-  const result = await query(`
+  const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
@@ -141,7 +142,7 @@ async function getNextScheduledJob() {
 }
 
 export async function getJob(jobId) {
-  const result = await query(`
+  const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
