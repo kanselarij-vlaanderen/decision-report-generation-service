@@ -201,7 +201,9 @@ async function executeJob(job) {
   try {
     await updateJobStatus(job.uri, config.job.statuses.ongoing);
     for (const reportId of job.reportIds) {
-      const fileMeta = await generateReport(reportId, jobRequestHeaders[job.id]);
+      const fileMeta = await generateReport(reportId,
+        jobRequestHeaders[job.id],
+        true);
     }
     await updateJobStatus(job.uri, config.job.statuses.success);
     delete jobRequestHeaders[job.id];

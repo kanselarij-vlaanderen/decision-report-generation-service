@@ -10,10 +10,14 @@ const job = {
     },
     graph: 'http://mu.semte.ch/graphs/organizations/kanselarij'
 }
+const kanselarij = {
+  graph: 'http://mu.semte.ch/graphs/organizations/kanselarij'
+}
 
 export default {
   RESOURCE_BASE,
   STORAGE_PATH,
   STORAGE_URI,
   job,
+  kanselarij,
 };
