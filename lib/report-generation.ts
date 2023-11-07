@@ -331,14 +331,10 @@ export async function generateReport(reportId: string, requestHeaders) {
   const reportContext = await retrieveContext(reportId);
   const secretary = await retrieveReportSecretary(reportId);
   if (!reportParts || !reportContext) {
-    res.status(500);
     throw new Error("No report parts found.");
-    return;
   }
   if (!reportContext.meeting) {
-    res.status(500);
     throw new Error("No meeting found for this report.");
-    return;
   }
 
   const oldFile = await retrieveOldFile(reportId);
