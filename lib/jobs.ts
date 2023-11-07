@@ -176,7 +176,7 @@ export async function getJob(jobId) {
 }
 
 async function updateJobStatus(uri, status) {
-  await update(`
+  await updateSudo(`
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
