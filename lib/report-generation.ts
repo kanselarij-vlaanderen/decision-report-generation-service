@@ -14,6 +14,7 @@ import constants from "../constants";
 import sanitizeHtml from "sanitize-html";
 import * as fs from "fs";
 import fetch from "node-fetch";
+import { retrieveSignFlowStatus } from "./sign-flow";
 
 export interface ReportParts {
   annotation: string;
@@ -398,11 +399,15 @@ export async function generateReport(
   const reportParts = await retrieveReportParts(reportId, viaJob);
   const reportContext = await retrieveContext(reportId, viaJob);
   const secretary = await retrieveReportSecretary(reportId, viaJob);
+  const signFlowStatus = await retrieveSignFlowStatus(reportId, viaJob);
   if (!reportParts || !reportContext) {
     throw new Error("No report parts found.");
   }
   if (!reportContext.meeting) {
     throw new Error("No meeting found for this report.");
+  }
+  if (signFlowStatus && signFlowStatus !== config.signFlows.statuses.marked) {
+    throw new Error("Cannot edit reports that have signatures.")
   }
 
   const oldFile = await retrieveOldFile(reportId, viaJob);

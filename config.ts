@@ -15,10 +15,18 @@ const job = {
     graph: graph.kanselarij,
 }
 
+const signFlows = {
+  graph: 'http://mu.semte.ch/graphs/system/signing',
+  statuses: {
+    marked: 'http://themis.vlaanderen.be/id/handtekenstatus/f6a60072-0537-11ee-bb35-ee395168dcf7'
+  }
+}
+
 export default {
   RESOURCE_BASE,
   STORAGE_PATH,
   STORAGE_URI,
   graph,
   job,
+  signFlows,
 };
