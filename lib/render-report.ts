@@ -1,4 +1,4 @@
-import { ReportParts, Meeting, ReportContext, Secretary } from "../app";
+import { ReportParts, Meeting, ReportContext, Secretary } from "./report-generation";
 import constants from "../constants";
 import { addLeadingZeros, formatDate } from "./utils";
 import * as fs from "fs";

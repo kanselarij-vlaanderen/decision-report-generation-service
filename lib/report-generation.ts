@@ -7,7 +7,7 @@ import {
   uuid as generateUuid,
 } from "mu";
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
-import { createFile, PhysicalFile, VirtualFile } from "./file";
+import { createFile, PhysicalFile, VirtualFile, FileMeta } from "./file";
 import { renderReport, createStyleHeader } from "./render-report";
 import config from "../config";
 import constants from "../constants";
@@ -31,6 +31,7 @@ export type ReportContext = {
   meeting: Meeting;
   agendaItem: AgendaItem;
   accessLevel: string;
+  currentReportName: string;
 };
 
 export type AgendaItem = {
@@ -60,7 +61,11 @@ async function deleteFile(requestHeaders, file: File) {
   try {
     const response = await fetch(`http://file/files/${file.id}`, {
       method: "delete",
-      headers: requestHeaders,
+      headers: {
+        'mu-auth-allowed-groups': requestHeaders['mu-auth-allowed-groups'],
+        'mu-call-id': requestHeaders['mu-call-id'],
+        'mu-session-id': requestHeaders['mu-session-id'],
+      }
     });
     if (!response.ok) {
       throw new Error(`Something went wrong while removing the file: ${response.statusText}`);
@@ -81,7 +86,7 @@ async function retrieveOldFile(
   PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
 
   SELECT DISTINCT ?fileId WHERE {
-    GRAPH <${config.kanselarij.graph}> {
+    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       ?report prov:value ?file .
@@ -177,7 +182,7 @@ async function retrieveReportParts(
   PREFIX pav: <http://purl.org/pav/>
 
   SELECT * WHERE {
-    GRAPH <${config.kanselarij.graph}> {
+    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
       ?s mu:uuid ${sparqlEscapeString(reportId)} .
       ?s a besluitvorming:Verslag .
    	  ?piecePart dct:isPartOf ?s .
@@ -230,7 +235,7 @@ async function retrieveReportSecretary(
     PREFIX persoon: <https://data.vlaanderen.be/ns/persoon#>
 
     SELECT DISTINCT ?lastName ?firstName ?title WHERE {
-      GRAPH <${config.kanselarij.graph}> {
+      GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
         ?report mu:uuid ${sparqlEscapeString(reportId)} .
         ?report a besluitvorming:Verslag .
         ?report besluitvorming:beschrijft ?decisionActivity .
@@ -276,7 +281,7 @@ async function retrieveContext(
   PREFIX schema: <http://schema.org/>
 
   SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?agendaItemType ?accessLevel ?currentReportName WHERE {
-    GRAPH <${config.kanselarij.graph}> {
+    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       ?report dct:title ?currentReportName .
@@ -353,17 +358,17 @@ async function attachToReport(
   PREFIX prov: <http://www.w3.org/ns/prov#>
 
   DELETE {
-    GRAPH <${config.kanselarij.graph}> {
+    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
       ?report prov:value ?document .
       ?report dct:modified ?modified .
     }
   } INSERT {
-    GRAPH <${config.kanselarij.graph}> {
+    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
       ?report prov:value ${sparqlEscapeUri(fileMeta.uri)} .
       ?report dct:modified ${sparqlEscapeDateTime(new Date())}
     }
   } WHERE {
-    GRAPH <${config.kanselarij.graph}> {
+    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       OPTIONAL { ?report dct:modified ?modified .}
@@ -382,20 +387,16 @@ async function attachToReport(
 export async function generateReport(
   reportId: string,
   requestHeaders,
-  viaJob
+  viaJob: boolean = false,
 ) {
   const reportParts = await retrieveReportParts(reportId, viaJob);
   const reportContext = await retrieveContext(reportId, viaJob);
   const secretary = await retrieveReportSecretary(reportId, viaJob);
   if (!reportParts || !reportContext) {
-    res.status(500);
     throw new Error("No report parts found.");
-    return;
   }
   if (!reportContext.meeting) {
-    res.status(500);
     throw new Error("No meeting found for this report.");
-    return;
   }
 
   const oldFile = await retrieveOldFile(reportId, viaJob);
