@@ -86,7 +86,7 @@ async function retrieveOldFile(
   PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
 
   SELECT DISTINCT ?fileId WHERE {
-    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       ?report prov:value ?file .
@@ -182,7 +182,7 @@ async function retrieveReportParts(
   PREFIX pav: <http://purl.org/pav/>
 
   SELECT * WHERE {
-    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?s mu:uuid ${sparqlEscapeString(reportId)} .
       ?s a besluitvorming:Verslag .
    	  ?piecePart dct:isPartOf ?s .
@@ -234,16 +234,22 @@ async function retrieveReportSecretary(
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
     PREFIX persoon: <https://data.vlaanderen.be/ns/persoon#>
 
-    SELECT DISTINCT ?lastName ?firstName ?title WHERE {
-      GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
-        ?report mu:uuid ${sparqlEscapeString(reportId)} .
-        ?report a besluitvorming:Verslag .
-        ?report besluitvorming:beschrijft ?decisionActivity .
-        ?decisionActivity prov:wasAssociatedWith ?mandatee .
+    SELECT DISTINCT ?lastName ?firstName ?title  WHERE {
+      GRAPH ${sparqlEscapeUri(config.graph.public)}  {
         ?mandatee dct:title ?title .
         ?mandatee mandaat:isBestuurlijkeAliasVan ?person .
         ?person foaf:familyName ?lastName .
         ?person persoon:gebruikteVoornaam ?firstName .
+        {
+          SELECT DISTINCT ?mandatee WHERE {
+            GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+              ?report mu:uuid ${sparqlEscapeString(reportId)} .
+              ?report a besluitvorming:Verslag .
+              ?report besluitvorming:beschrijft ?decisionActivity .
+              ?decisionActivity prov:wasAssociatedWith ?mandatee .
+            }
+          }
+        }
       }
     }
     `;
@@ -281,7 +287,7 @@ async function retrieveContext(
   PREFIX schema: <http://schema.org/>
 
   SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?agendaItemType ?accessLevel ?currentReportName WHERE {
-    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       ?report dct:title ?currentReportName .
@@ -358,17 +364,17 @@ async function attachToReport(
   PREFIX prov: <http://www.w3.org/ns/prov#>
 
   DELETE {
-    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report prov:value ?document .
       ?report dct:modified ?modified .
     }
   } INSERT {
-    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report prov:value ${sparqlEscapeUri(fileMeta.uri)} .
       ?report dct:modified ${sparqlEscapeDateTime(new Date())}
     }
   } WHERE {
-    GRAPH ${sparqlEscapeUri(config.kanselarij.graph)} {
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       OPTIONAL { ?report dct:modified ?modified .}
