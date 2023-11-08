@@ -5,6 +5,8 @@
   "author": "Kobe Mertens",
   "type": "module",
   "dependencies": {
+    "@lblod/mu-auth-sudo": "^0.6.1",
+    "cron": "^1.8.2",
     "html-pdf-chrome": "0.8.4",
     "sanitize-html": "2.10.0",
     "node-fetch": "2.7.0"
