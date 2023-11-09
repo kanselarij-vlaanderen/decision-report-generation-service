@@ -16,7 +16,7 @@ import fetch from "node-fetch";
 import constants from "./constants";
 
 export interface ReportParts {
-  annotation: string;
+  annotation: string | null;
   concerns: string;
   decision: string;
 }
@@ -294,10 +294,18 @@ async function retrieveContext(reportId: string): Promise<ReportContext> {
 
 function sanitizeReportParts(reportParts: ReportParts): ReportParts {
   const { concerns, decision, annotation } = reportParts;
+  const additionalAllowedTags = ['del'];
+  const additionalAllowedAttributes = {'ol': ['data-list-style']};
+  const options = sanitizeHtml.defaults;
+  options.allowedTags = sanitizeHtml.defaults.allowedTags.concat(additionalAllowedTags);
+  options.allowedAttributes = { 
+    ...sanitizeHtml.defaults.allowedAttributes, 
+    ...additionalAllowedAttributes
+  };
   return {
     annotation: annotation ? sanitizeHtml(annotation, sanitizeHtml.defaults) : null,
-    concerns: sanitizeHtml(concerns, sanitizeHtml.defaults),
-    decision: sanitizeHtml(decision, sanitizeHtml.defaults),
+    concerns: sanitizeHtml(concerns, options),
+    decision: sanitizeHtml(decision, options),
   };
 }
 
