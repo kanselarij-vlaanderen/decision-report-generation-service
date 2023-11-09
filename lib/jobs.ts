@@ -1,5 +1,6 @@
-import { querySudo as query, updateSudo as update } from '@lblod/mu-auth-sudo';
-import { sparqlEscapeString, sparqlEscapeUri, sparqlEscapeDateTime, sparqlEscapeInt, uuid } from 'mu';
+import { query, update } from 'mu';
+import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
+import { sparqlEscapeString, sparqlEscapeUri, sparqlEscapeDateTime, uuid } from 'mu';
 import config from '../config';
 
 import { generateReport } from "./report-generation";
@@ -8,6 +9,8 @@ import { generateReport } from "./report-generation";
 const jobRequestHeaders = {};
 
 export class JobManager {
+  isExecuting: Boolean;
+
   constructor() {
     this.isExecuting = false;
   }
@@ -60,7 +63,7 @@ export async function createJob(reportUris, requestHeaders) {
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
   INSERT DATA {
-    GRAPH <${config.job.graph}> {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
         ${sparqlEscapeUri(jobUri)} a ext:ReportGenerationJob ;
                mu:uuid ${sparqlEscapeString(jobUuid)} ;
                prov:used ${reportsObject} ;
@@ -80,16 +83,13 @@ export async function createJob(reportUris, requestHeaders) {
 }
 
 async function getReportIds(job) {
-  const result = await query(`
+  const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-  PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
-  PREFIX adms: <http://www.w3.org/ns/adms#>
 
   SELECT ?report ?reportId
   WHERE {
-    GRAPH <${config.job.graph}> {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
       ${sparqlEscapeUri(job.uri)} prov:used ?report .
       ?report mu:uuid ?reportId .
     }
@@ -103,7 +103,7 @@ async function getReportIds(job) {
 }
 
 async function getNextScheduledJob() {
-  const result = await query(`
+  const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
@@ -111,7 +111,7 @@ async function getNextScheduledJob() {
 
   SELECT ?uri ?id ?status
   WHERE {
-    GRAPH <${config.job.graph}> {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
       VALUES ?status {
         ${sparqlEscapeUri(config.job.statuses.scheduled)}
       }
@@ -133,7 +133,7 @@ async function getNextScheduledJob() {
       uri: bindings[0]['uri'].value,
       status: bindings[0]['status'].value,
     };
-    job.reportIds = await getReportIds(job);
+    job['reportIds'] = await getReportIds(job);
     return job;
   } else {
     return null;
@@ -141,7 +141,7 @@ async function getNextScheduledJob() {
 }
 
 export async function getJob(jobId) {
-  const result = await query(`
+  const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
@@ -149,7 +149,7 @@ export async function getJob(jobId) {
 
   SELECT ?uri ?id ?status ?created ?modified
   WHERE {
-    GRAPH <${config.job.graph}> {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
       ?uri a ext:ReportGenerationJob ;
            mu:uuid ${sparqlEscapeString(jobId)} ;
            dct:created ?created ;
@@ -167,7 +167,7 @@ export async function getJob(jobId) {
       created: bindings[0]['created']?.value,
       modified: bindings[0]['modified']?.value,
     };
-    job.reportIds = await getReportIds(job);
+    job['reportIds'] = await getReportIds(job);
     return job;
   } else {
     return null;
@@ -175,12 +175,12 @@ export async function getJob(jobId) {
 }
 
 async function updateJobStatus(uri, status) {
-  await update(`
+  await updateSudo(`
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
   DELETE WHERE {
-    GRAPH <${config.job.graph}> {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
         ${sparqlEscapeUri(uri)} dct:modified ?modified ;
              adms:status ?status.
     }
@@ -189,7 +189,7 @@ async function updateJobStatus(uri, status) {
   ;
 
   INSERT DATA {
-    GRAPH <${config.job.graph}> {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
         ${sparqlEscapeUri(uri)} dct:modified ${sparqlEscapeDateTime(new Date())};
              adms:status ${sparqlEscapeUri(status)}.
     }
@@ -200,7 +200,7 @@ async function executeJob(job) {
   try {
     await updateJobStatus(job.uri, config.job.statuses.ongoing);
     for (const reportId of job.reportIds) {
-      const fileMeta = await generateReport(reportId, jobRequestHeaders[job.id]);
+      await generateReport(reportId, jobRequestHeaders[job.id], true);
     }
     await updateJobStatus(job.uri, config.job.statuses.success);
     delete jobRequestHeaders[job.id];

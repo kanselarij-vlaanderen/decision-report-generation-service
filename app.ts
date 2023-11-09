@@ -1,4 +1,4 @@
-import { app } from "mu";
+import { app, errorHandler } from "mu";
 import { createJob, getJob, JobManager } from "./lib/jobs";
 import { generateReport } from "./lib/report-generation";
 import { CronJob } from 'cron';
@@ -14,14 +14,13 @@ new CronJob(cronFrequency, function() {
 }, null, true);
 
 /* Generate a single report */
-app.get("/:id", async function (req, res) {
+app.get("/:id", async function (req, res, next) {
   try {
     const fileMeta = await generateReport(req.params.id, req.headers);
     res.status(200).send(fileMeta);
   } catch (e) {
-    res.status(500);
     console.error(e);
-    res.send(e);
+    next({ message: e.message, status: 500 });
   }
 });
 
@@ -29,10 +28,9 @@ app.get("/:id", async function (req, res) {
   Requires req.body to contain a non-empty array 'reports' with report URIs.
   Returns the ID of the generation job.
 */
-app.post("/generate-reports", async function (req, res) {
+app.post("/generate-reports", async function (req, res, next) {
   if (!req.body?.reports || req.body.reports.length === 0) {
-    res.status(400);
-    res.send("reports cannot be empty");
+    next({ message: 'Reports cannot be emtpy' });
     return;
   }
   try {
@@ -41,25 +39,24 @@ app.post("/generate-reports", async function (req, res) {
     res.send(JSON.stringify(generationJob));
     jobManager.run();
   } catch (e) {
-    res.status(500);
     console.error(e);
-    res.send(e);
+    next({ message: e.message, status: 500 });
   }
 });
 
-app.get("/job/:id", async function (req, res) {
+app.get("/job/:id", async function (req, res, next) {
   try {
     const job = await getJob(req.params.id);
     if (job) {
       res.status(200);
       res.send(JSON.stringify(job));
     } else {
-      res.status(404);
-      res.send({ message: 'Job not found' });
+      next({ message: 'Job not found', status: 404 });
     }
   } catch (e) {
-    res.status(500);
     console.error(e);
-    res.send(e);
+    next({ message: e.message, status: 500 });
   }
 });
+
+app.use(errorHandler);
