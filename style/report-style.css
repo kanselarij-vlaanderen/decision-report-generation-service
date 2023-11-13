@@ -107,7 +107,6 @@ ol[data-list-style=decimal-extended] > li {
 }
 ol[data-list-style=decimal-extended] > li:before {
   display: table-cell;
-  min-width: 2.4rem;
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
@@ -126,7 +125,6 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li {
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li:before {
   display: table-cell;
-  min-width: 2.4rem;
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
@@ -145,7 +143,6 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li:before {
   display: table-cell;
-  min-width: 2.4rem;
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
@@ -164,7 +161,6 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li:before {
   display: table-cell;
-  min-width: 2.4rem;
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
@@ -183,7 +179,6 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li:before {
   display: table-cell;
-  min-width: 2.4rem;
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
