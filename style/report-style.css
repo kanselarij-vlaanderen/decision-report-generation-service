@@ -91,6 +91,10 @@ ol:not(.au-c-list-horizontal)[data-list-style='lower-alpha'] {
   list-style-type: lower-alpha;
 }
 
+ol:not(.au-c-list-horizontal) > li > ol:not([data-list-style]) {
+  list-style-type: inherit;
+}
+
 ol[data-list-style=decimal-extended] {
   display: table;
   list-style-type: none;
@@ -107,6 +111,7 @@ ol[data-list-style=decimal-extended] > li:before {
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   content: counters(item, ".") ". ";
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) {
@@ -125,6 +130,7 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li:befor
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   content: counters(item, ".") ". ";
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) {
@@ -143,6 +149,7 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   content: counters(item, ".") ". ";
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) {
@@ -161,6 +168,7 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   content: counters(item, ".") ". ";
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) {
@@ -179,6 +187,7 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:
   padding-right: 0.5ch;
   text-align: end;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   content: counters(item, ".") ". ";
 }
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) {
