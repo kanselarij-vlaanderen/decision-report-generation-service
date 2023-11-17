@@ -147,7 +147,7 @@ async function generatePdf(
     const fileName = generateReportFileName(reportContext);
     const file: VirtualFile =   {
       id: virtualUuid,
-      uri: `${config.RESOURCE_BASE}/files/${virtualUuid}`,
+      uri: `${config.FILE_RESOURCE_BASE}${virtualUuid}`,
       name: fileName,
       extension: "pdf",
       size: buffer.byteLength,
