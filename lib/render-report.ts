@@ -23,19 +23,28 @@ function meetingKindTitle(meeting: Meeting) {
     PVV,
     ANNEX,
   } = constants.MEETING_KINDS;
-  switch (meeting.kind) {
+  let meetingKindTitle: string;
+  const meetingKind = meeting.mainMeetingKind || meeting.kind;
+  switch (meetingKind) {
     case MINISTERRAAD:
-      return `Vergadering van ${formattedDate}`;
+      meetingKindTitle = `Vergadering van ${formattedDate}`;
+      break;
     case ELEKTRONISCHE_PROCEDURE:
-      return `Elektronische vergadering van ${formattedDate}`;
+      meetingKindTitle = `Elektronische vergadering van ${formattedDate}`;
+      break;
     case BIJZONDERE_MINISTERRAAD:
-      return `Bijzondere vergadering van ${formattedDate}`;
+      meetingKindTitle = `Bijzondere vergadering van ${formattedDate}`;
+      break;
     case PVV:
-      return `Vergadering van ${formattedDate}<br />Plan Vlaamse Veerkracht`;
+      throw new Error(`Hoofdvergadering kan geen Plan Vlaamse Veerkracht zijn`);
     case ANNEX:
     default:
       throw new Error(`Unknown meeting kind: ${meeting.kind}`);
   }
+  if (meeting.kind === PVV) {
+    meetingKindTitle += `<br />Plan Vlaamse Veerkracht`;
+  }
+  return meetingKindTitle;
 }
 
 export function renderReport(

@@ -26,6 +26,7 @@ export interface Meeting {
   plannedStart: Date;
   numberRepresentation: number;
   kind: string;
+  mainMeetingKind: string | null;
 }
 
 export type ReportContext = {
@@ -287,7 +288,7 @@ async function retrieveContext(
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX schema: <http://schema.org/>
 
-  SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?agendaItemType ?accessLevel ?currentReportName WHERE {
+  SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?mainMeetingType ?agendaItemType ?accessLevel ?currentReportName WHERE {
     GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
@@ -298,6 +299,10 @@ async function retrieveContext(
       ?meeting ext:numberRepresentation ?numberRepresentation .
       ?meeting besluit:geplandeStart ?geplandeStart .
       ?meeting dct:type ?meetingType .
+      OPTIONAL {
+        ?meeting dct:isPartOf ?mainMeeting .
+        ?mainMeeting dct:type ?mainMeetingType .
+      }
       ?agendaItem schema:position ?agendaItemNumber .
       ?agendaItem dct:type ?agendaItemType .
       FILTER(NOT EXISTS { [] prov:wasRevisionOf ?agendaItem })
@@ -319,6 +324,7 @@ async function retrieveContext(
           agendaItemNumber,
           agendaItemType,
           meetingType,
+          mainMeetingType,
           accessLevel,
           currentReportName
         },
@@ -331,6 +337,7 @@ async function retrieveContext(
       plannedStart: new Date(geplandeStart.value),
       numberRepresentation: numberRepresentation.value,
       kind: meetingType.value,
+      mainMeetingKind: mainMeetingType?.value
     },
     agendaItem: {
       number: agendaItemNumber.value,
