@@ -1,4 +1,4 @@
-import { query, update } from 'mu';
+import { update } from 'mu';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { sparqlEscapeString, sparqlEscapeUri, sparqlEscapeDateTime, uuid } from 'mu';
 import config from '../config';
