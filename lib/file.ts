@@ -5,6 +5,8 @@ import {
   sparqlEscapeDateTime,
   update,
 } from "mu";
+import { updateSudo } from '@lblod/mu-auth-sudo';
+import config from "../config";
 
 export interface FileMeta {
   name: string;
@@ -22,6 +24,7 @@ export type VirtualFile = FileMeta & { physicalFile: PhysicalFile };
 
 const createFile = async function (
   file: VirtualFile,
+  viaJob: boolean,
 ) {
   const q = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -31,6 +34,7 @@ const createFile = async function (
   PREFIX nie: <http://www.semanticdesktop.org/ontologies/2007/01/19/nie#>
 
   INSERT DATA {
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ${sparqlEscapeUri(file.uri)} a nfo:FileDataObject ;
             nfo:fileName ${sparqlEscapeString(file.name)} ;
             mu:uuid ${sparqlEscapeString(file.id)} ;
@@ -48,8 +52,13 @@ const createFile = async function (
             dbpedia:fileExtension ${sparqlEscapeString(file.physicalFile.extension)} ;
             dct:created ${sparqlEscapeDateTime(file.physicalFile.created)} ;
             dct:modified ${sparqlEscapeDateTime(file.physicalFile.created)} .
+    }
   }`;
-  await update(q);
+  if (viaJob) {
+    await updateSudo(q);
+  } else {
+    await update(q);
+  }
 };
 
 export { createFile };

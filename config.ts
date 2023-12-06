@@ -1,4 +1,10 @@
+const PIECE_RESOURCE_BASE = 'http://themis.vlaanderen.be/id/stuk/';
+const DOCUMENT_CONTAINER_RESOURCE_BASE = 'http://themis.vlaanderen.be/id/serie/';
 const FILE_RESOURCE_BASE = 'http://themis.vlaanderen.be/id/bestand/';
+
+const INTERN_OVERHEID = 'http://themis.vlaanderen.be/id/concept/toegangsniveau/634f438e-0d62-4ae4-923a-b63460f6bc46';
+const BESLISSINGSFICHE_TYPE = 'http://themis.vlaanderen.be/id/concept/document-type/e807feec-1958-46cf-a558-3379b5add49e';
+
 const STORAGE_PATH = `/share`;
 const STORAGE_URI = `share://`;
 const graph = {
@@ -23,7 +29,11 @@ const signFlows = {
 }
 
 export default {
+  PIECE_RESOURCE_BASE,
+  DOCUMENT_CONTAINER_RESOURCE_BASE,
   FILE_RESOURCE_BASE,
+  INTERN_OVERHEID,
+  BESLISSINGSFICHE_TYPE,
   STORAGE_PATH,
   STORAGE_URI,
   graph,

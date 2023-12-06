@@ -1,17 +1,18 @@
+import { uuid } from "mu";
 import { ReportParts, Meeting, ReportContext, Secretary } from "./report-generation";
 import constants from "../constants";
 import { addLeadingZeros, formatDate } from "./utils";
 import * as fs from "fs";
 
-export function createStyleHeader() {
+function createStyleHeader() {
   const styles = fs.readFileSync("/app/style/report-style.css").toString();
 
   return `
-  <head>
-    <style>
-      ${styles}
-    </style>
-  </head>`;
+<head>
+  <style>
+    ${styles}
+  </style>
+</head>`;
 }
 
 function meetingKindTitle(meeting: Meeting) {
@@ -47,7 +48,7 @@ function meetingKindTitle(meeting: Meeting) {
   return meetingKindTitle;
 }
 
-export function renderReport(
+function generateReportContent(
   reportParts: ReportParts,
   reportContext: ReportContext,
   secretary: Secretary | null
@@ -204,4 +205,37 @@ export function renderReport(
   reportHtml += `
 </div>`;
   return reportHtml;
+}
+
+export function generateReportHtml(
+  reportParts: ReportParts,
+  reportContext: ReportContext,
+  secretary: Secretary | null
+): string {
+  return `
+${createStyleHeader()}
+${generateReportContent(reportParts, reportContext, secretary)}`;
+}
+
+export function generateReportBundleHtml(parameters): string {
+  let html = createStyleHeader();
+  for (const { reportParts, reportContext, secretary } of parameters) {
+    const id = uuid();
+    html += `
+<style>
+  @page report-${id} {
+    counter-increment: page-${id};
+    @bottom-right {
+      font-family: Arial;
+      content: counter(page-${id}) "/" target-counter("#end-report-${id}", page-${id});
+    }
+  }
+</style>
+<div style="page: report-${id}; break-after: always;">
+  ${generateReportContent(reportParts, reportContext, secretary)}
+  <span id="end-report-${id}"></span>
+</div>
+`;
+  }
+  return html;
 }

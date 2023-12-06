@@ -1,6 +1,6 @@
 import { app, errorHandler } from "mu";
 import { createJob, getJob, JobManager } from "./lib/jobs";
-import { generateReport } from "./lib/report-generation";
+import { generateReport, generateReportBundle } from "./lib/report-generation";
 import { CronJob } from 'cron';
 
 const jobManager = new JobManager();
@@ -30,8 +30,7 @@ app.get("/:id", async function (req, res, next) {
 */
 app.post("/generate-reports", async function (req, res, next) {
   if (!req.body?.reports || req.body.reports.length === 0) {
-    next({ message: 'Reports cannot be emtpy' });
-    return;
+    return next({ message: 'Reports cannot be emtpy' });
   }
   try {
     const generationJob = await createJob(req.body.reports, req.headers);
@@ -39,6 +38,19 @@ app.post("/generate-reports", async function (req, res, next) {
     res.send(JSON.stringify(generationJob));
     jobManager.run();
   } catch (e) {
+    console.error(e);
+    next({ message: e.message, status: 500 });
+  }
+});
+
+app.post("/generate-reports-bundle", async function (req, res, next) {
+  if (!req.body?.reports || req.body.reports.length === 0) {
+    return next({ message: 'Reports cannot be empty' });
+  }
+  try {
+    const fileMeta = await generateReportBundle(req.body.reports, req.headers);
+    res.status(200).send(fileMeta);
+  } catch(e) {
     console.error(e);
     next({ message: e.message, status: 500 });
   }
