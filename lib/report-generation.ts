@@ -8,7 +8,7 @@ import {
 } from "mu";
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { createFile, PhysicalFile, VirtualFile, FileMeta } from "./file";
-import { generateReportBundleHtml, generateReportHtml } from "./render-report";
+import { generateReportHtml } from "./render-report";
 import config from "../config";
 import constants from "../constants";
 import sanitizeHtml from "sanitize-html";
@@ -60,7 +60,7 @@ function generateReportFileName(reportContext: ReportContext): string {
   return `${reportContext.currentReportName}.pdf`.replace('/', '-');
 }
 
-async function deleteFile(requestHeaders, file: File) {
+export async function deleteFile(requestHeaders, file: File) {
   try {
     const response = await fetch(`http://file/files/${file.id}`, {
       method: "delete",
@@ -111,44 +111,6 @@ async function retrieveOldFile(
   return null;
 }
 
-async function retrieveOldBundleFile(
-  meetingId: string,
-  viaJob: boolean,
-): Promise<File | null> {
-  const queryString = `
-  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-  PREFIX besluit: <http://data.vlaanderen.be/ns/besluit#>
-  PREFIX prov: <http://www.w3.org/ns/prov#>
-  PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
-  PREFIX dct: <http://purl.org/dc/terms/>
-
-  SELECT DISTINCT ?fileId WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
-      ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
-      ?meeting a besluit:Vergaderactiviteit .
-      ?meeting ext:numberRepresentation ?numberRepresentation .
-      ?meeting ext:zittingDocumentversie ?piece .
-      BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)
-      ?piece dct:title ?pieceName .
-      ?piece prov:value ?file .
-      ?file a nfo:FileDataObject .
-      ?file mu:uuid ?fileId .
-    }
-  }`;
-  let queryResult;
-  if (viaJob) {
-    queryResult = await querySudo(queryString);
-  } else {
-    queryResult = await query(queryString);
-  }
-  if (queryResult.results?.bindings?.length) {
-    const result = queryResult.results.bindings[0];
-    return { id: result.fileId.value };
-  }
-  return null;
-}
-
 async function renderHtml(html: string): Promise<Buffer> {
   const response = await fetch("http://html-to-pdf/generate", {
     method: "POST",
@@ -173,7 +135,7 @@ async function renderHtml(html: string): Promise<Buffer> {
   }
 }
 
-async function storePdf(fileName: string, buffer: Buffer, viaJob: boolean) {
+export async function storePdf(fileName: string, buffer: Buffer | Uint8Array, viaJob: boolean) {
   const now = new Date();
   const physicalUuid = generateUuid();
   const physicalName = `${physicalUuid}.pdf`
@@ -308,7 +270,7 @@ async function retrieveReportSecretary(
   return null;
 }
 
-async function retrieveContext(
+export async function retrieveContext(
   reportId: string,
   viaJob: boolean
 ): Promise<ReportContext> {
@@ -445,98 +407,6 @@ async function attachToReport(
   }
 }
 
-async function attachToMeeting(
-  meetingId: string,
-  fileMeta: FileMeta,
-  viaJob: boolean
-) {
-  const pieceUuid = generateUuid();
-  const pieceUri = `${config.PIECE_RESOURCE_BASE}${pieceUuid}`;
-
-  const documentContainerUuid = generateUuid();
-  const documentContainerUri = `${config.DOCUMENT_CONTAINER_RESOURCE_BASE}${documentContainerUuid}`;
-
-  const now = new Date();
-
-  const insertPieceQueryString = `
-  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-  PREFIX dossier: <https://data.vlaanderen.be/ns/dossier#>
-  PREFIX besluit: <http://data.vlaanderen.be/ns/besluit#>
-  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
-  PREFIX dct: <http://purl.org/dc/terms/>
-  PREFIX prov: <http://www.w3.org/ns/prov#>
-
-  INSERT {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
-      ?meeting ext:zittingDocumentversie ${sparqlEscapeUri(pieceUri)} .
-      ${sparqlEscapeUri(pieceUri)} a dossier:Stuk ;
-        mu:uuid ${sparqlEscapeString(pieceUuid)} ;
-        dct:title ?pieceName ;
-        besluitvorming:vertrouwelijkheidsniveau ${sparqlEscapeUri(config.INTERN_OVERHEID)} ;
-        dct:created ${sparqlEscapeDateTime(now)} ;
-        dct:modified ${sparqlEscapeDateTime(now)} .
-      ${sparqlEscapeUri(documentContainerUri)} a dossier:Serie ;
-        mu:uuid ${sparqlEscapeString(documentContainerUuid)} ;
-        dct:created ${sparqlEscapeDateTime(now)} ;
-        dct:type ${sparqlEscapeUri(config.BESLISSINGSFICHE_TYPE)} ;
-        dossier:Collectie.bestaatUit ${sparqlEscapeUri(pieceUri)} .
-    }
-  }
-  WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
-      ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
-      ?meeting a besluit:Vergaderactiviteit .
-      ?meeting ext:numberRepresentation ?numberRepresentation .
-      BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)
-      FILTER NOT EXISTS {
-        ?meeting ext:zittingDocumentversie ?piece .
-        ?piece dct:title ?pieceName .
-      }
-    }
-  }`;
-
-  const attachFileToPieceQueryString = `
-  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
-  PREFIX dossier: <https://data.vlaanderen.be/ns/dossier#>
-  PREFIX besluit: <http://data.vlaanderen.be/ns/besluit#>
-  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
-  PREFIX dct: <http://purl.org/dc/terms/>
-  PREFIX prov: <http://www.w3.org/ns/prov#>
-  DELETE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
-      ?piece prov:value ?file .
-      ?piece dct:modified ?modified .
-    }
-  } INSERT {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
-      ?piece prov:value ${sparqlEscapeUri(fileMeta.uri)} .
-      ?piece dct:modified ${sparqlEscapeDateTime(now)}
-    }
-  } WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
-      ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
-      ?meeting a besluit:Vergaderactiviteit .
-      ?meeting ext:numberRepresentation ?numberRepresentation .
-      ?meeting ext:zittingDocumentversie ?piece .
-      BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)
-      ?piece dct:title ?pieceName .
-      OPTIONAL { ?piece dct:modified ?modified .}
-      OPTIONAL { ?piece prov:value ?file .}
-    }
-  }
-  `;
-
-  if (viaJob) {
-    await updateSudo(insertPieceQueryString);
-    await updateSudo(attachFileToPieceQueryString);
-  } else {
-    await update(insertPieceQueryString);
-    await update(attachFileToPieceQueryString);
-  }
-}
-
 export async function generateReport(
   reportId: string,
   requestHeaders,
@@ -569,66 +439,6 @@ export async function generateReport(
   if (fileMeta) {
     await attachToReport(reportId, fileMeta, viaJob);
     if (oldFile) {
-      deleteFile(requestHeaders, oldFile);
-    }
-    return fileMeta;
-  }
-  throw new Error("Something went wrong while generating the pdf");
-}
-
-export async function generateReportBundle(
-  reportIds: [string],
-  requestHeaders,
-  viaJob: boolean = false,
-) {
-
-  let parameters: {
-    reportParts: ReportParts,
-    reportContext: ReportContext,
-    secretary: Secretary | null
-  }[] = [];
-  for (const reportId of reportIds) {
-    const reportParts = await retrieveReportParts(reportId, viaJob);
-    const reportContext = await retrieveContext(reportId, viaJob);
-    const secretary = await retrieveReportSecretary(reportId, viaJob);
-    if (!reportParts || !reportContext) {
-      throw new Error(`No report parts found for report with id ${reportId}.`);
-    }
-    if (!reportContext.meeting) {
-      throw new Error(`No meeting found for report with id ${reportId}.`);
-    }
-
-    const sanitizedParts = sanitizeReportParts(reportParts);
-
-    parameters.push({ reportParts: sanitizedParts, reportContext, secretary });
-  }
-
-  const meetingId = parameters[0].reportContext.meeting.id;
-  const meetingNumberRepresentation = parameters[0].reportContext.meeting.numberRepresentation;
-  for (const { reportContext } of parameters) {
-    if (reportContext.meeting.id !== meetingId) {
-      throw new Error(`Not all reports belong to the same meeting, can't create bundle.`);
-    }
-  }
-
-  console.debug('############## Getting old bundle file');
-  const oldFile = await retrieveOldBundleFile(meetingId, viaJob);
-  console.debug('############## Generating report bundle html');
-  const reportBundleHtml = generateReportBundleHtml(parameters);
-  console.debug('############## Rendering report bundle in backend service');
-  const pdfBuffer = await renderHtml(reportBundleHtml);
-  console.debug('############## Storing rendered bundle PDF');
-  const fileMeta = await storePdf(
-    `${meetingNumberRepresentation.replace('/', '-')} - ALLE BESLISSINGEN.pdf`,
-    pdfBuffer,
-    viaJob,
-  );
-
-  if (fileMeta) {
-    console.debug('############## Attaching bundle PDF to meeting');
-    await attachToMeeting(meetingId, fileMeta, viaJob);
-    if (oldFile) {
-      console.debug('############## Deleting old bundle file');
       deleteFile(requestHeaders, oldFile);
     }
     return fileMeta;

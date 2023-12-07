@@ -2,8 +2,8 @@ import { update } from 'mu';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { sparqlEscapeString, sparqlEscapeUri, sparqlEscapeDateTime, uuid } from 'mu';
 import config from '../config';
-
-import { generateReport, generateReportBundle } from "./report-generation";
+import { generateReport } from "./report-generation";
+import { generateReportBundle } from './bundle-generation';
 
 // NOTE: this is a crutch, as generateReport needs the headers, but we can't store them
 const jobRequestHeaders = {};

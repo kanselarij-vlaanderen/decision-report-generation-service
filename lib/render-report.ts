@@ -216,26 +216,3 @@ export function generateReportHtml(
 ${createStyleHeader()}
 ${generateReportContent(reportParts, reportContext, secretary)}`;
 }
-
-export function generateReportBundleHtml(parameters): string {
-  let html = createStyleHeader();
-  for (const { reportParts, reportContext, secretary } of parameters) {
-    const id = uuid();
-    html += `
-<style>
-  @page report-${id} {
-    counter-increment: page-${id};
-    @bottom-right {
-      font-family: Arial;
-      content: counter(page-${id}) "/" target-counter("#end-report-${id}", page-${id});
-    }
-  }
-</style>
-<div style="page: report-${id}; break-after: always;">
-  ${generateReportContent(reportParts, reportContext, secretary)}
-  <span id="end-report-${id}"></span>
-</div>
-`;
-  }
-  return html;
-}
