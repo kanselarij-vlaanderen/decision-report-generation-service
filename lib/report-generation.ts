@@ -568,7 +568,7 @@ export async function generateReport(
 
 export async function generateReportBundle(
   reportIds: [string],
-  requestHeaders: Headers,
+  requestHeaders,
   viaJob: boolean = false,
 ) {
 
