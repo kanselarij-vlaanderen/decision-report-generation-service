@@ -58,7 +58,7 @@ async function getReportFiles(
 ): Promise<{ report: string, physicalFile: string }[] | null> {
   const queryString = `
 PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
-PREFIX sign: <http://mu.semte.ch/vocabularies/ext/handtekenen>
+PREFIX sign: <http://mu.semte.ch/vocabularies/ext/handtekenen/>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX nie: <http://www.semanticdesktop.org/ontologies/2007/01/19/nie#>
 PREFIX prov: <http://www.w3.org/ns/prov#>
@@ -70,9 +70,9 @@ WHERE {
   VALUES ?reportId { ${reportIds.map(sparqlEscapeString).join(' ')} }
   GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
     ?report mu:uuid ?reportId .
-    { ?report prov:value/^nie:dataSource ?physicalFile }
-    UNION
-    { ?report sign:getekendStukKopie/prov:value/^nie:dataSource ?physicalFile }
+    ?report prov:value/^nie:dataSource ?originalPhysicalFile .
+    OPTIONAL { ?report sign:getekendStukKopie/prov:value/^nie:dataSource ?signedPhysicalFile }
+    BIND(COALESCE(?signedPhysicalFile, ?originalPhysicalFile) AS ?physicalFile)
     ?report dct:title ?reportName .
     ?report besluitvorming:beschrijft ?decisionActivity .
     ?treatment besluitvorming:heeftBeslissing ?decisionActivity .
