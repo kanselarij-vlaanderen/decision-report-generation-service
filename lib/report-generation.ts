@@ -458,7 +458,7 @@ async function attachToMeeting(
 
   const now = new Date();
 
-  const queryString = `
+  const insertPieceQueryString = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dossier: <https://data.vlaanderen.be/ns/dossier#>
@@ -494,8 +494,16 @@ async function attachToMeeting(
         ?piece dct:title ?pieceName .
       }
     }
-  }
-  ;
+  }`;
+
+  const attachFileToPieceQueryString = `
+  PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+  PREFIX dossier: <https://data.vlaanderen.be/ns/dossier#>
+  PREFIX besluit: <http://data.vlaanderen.be/ns/besluit#>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  PREFIX prov: <http://www.w3.org/ns/prov#>
   DELETE {
     GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?piece prov:value ?file .
@@ -521,9 +529,11 @@ async function attachToMeeting(
   `;
 
   if (viaJob) {
-    await updateSudo(queryString);
+    await updateSudo(insertPieceQueryString);
+    await updateSudo(attachFileToPieceQueryString);
   } else {
-    await update(queryString);
+    await update(insertPieceQueryString);
+    await update(attachFileToPieceQueryString);
   }
 }
 
