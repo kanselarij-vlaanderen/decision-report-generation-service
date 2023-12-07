@@ -601,9 +601,13 @@ export async function generateReportBundle(
     }
   }
 
+  console.debug('############## Getting old bundle file');
   const oldFile = await retrieveOldBundleFile(meetingId, viaJob);
+  console.debug('############## Generating report bundle html');
   const reportBundleHtml = generateReportBundleHtml(parameters);
+  console.debug('############## Rendering report bundle in backend service');
   const pdfBuffer = await renderHtml(reportBundleHtml);
+  console.debug('############## Storing rendered bundle PDF');
   const fileMeta = await storePdf(
     `${meetingNumberRepresentation.replace('/', '-')} - ALLE BESLISSINGEN.pdf`,
     pdfBuffer,
@@ -611,8 +615,10 @@ export async function generateReportBundle(
   );
 
   if (fileMeta) {
+    console.debug('############## Attaching bundle PDF to meeting');
     await attachToMeeting(meetingId, fileMeta, viaJob);
     if (oldFile) {
+      console.debug('############## Deleting old bundle file');
       deleteFile(requestHeaders, oldFile);
     }
     return fileMeta;
