@@ -87,14 +87,23 @@ async function getReportIds(job) {
   const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  PREFIX schema: <http://schema.org/>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
 
-  SELECT ?report ?reportId
+  SELECT DISTINCT ?report ?reportId
   WHERE {
-    GRAPH ${sparqlEscapeUri(config.job.graph)} {
-      ${sparqlEscapeUri(job.uri)} prov:used ?report .
+    GRAPH ${sparqlEscapeUri(config.job.graph)} { ${sparqlEscapeUri(job.uri)} prov:used ?report }
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report mu:uuid ?reportId .
+      ?report dct:title ?reportName .
+      ?report besluitvorming:beschrijft ?decisionActivity .
+      ?treatment besluitvorming:heeftBeslissing ?decisionActivity .
+      ?treatment dct:subject ?agendaitem .
+      ?agendaitem dct:type ?agendaitemType .
     }
-  }`);
+    GRAPH ${sparqlEscapeUri(config.graph.public)} { ?agendaitemType schema:position ?typeOrder }
+  } ORDER BY ?typeOrder ?reportName`);
   const bindings = result.results.bindings;
   if (bindings.length > 0) {
     return bindings.map((binding) => binding['reportId'].value);
