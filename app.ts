@@ -48,8 +48,10 @@ app.post("/generate-reports-bundle", async function (req, res, next) {
     return next({ message: 'Reports cannot be empty' });
   }
   try {
-    const fileMeta = await generateReportBundle(req.body.reports, req.headers);
-    res.status(200).send(fileMeta);
+    const bundleGenerationJob = await createJob(req.body.reports, req.headers, true);
+    res.status(200);
+    res.send(JSON.stringify(bundleGenerationJob));
+    jobManager.run();
   } catch(e) {
     console.error(e);
     next({ message: e.message, status: 500 });
