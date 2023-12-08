@@ -16,8 +16,12 @@ import { FileMeta } from "./file";
 
 async function getOldBundleFile(
   meetingId: string,
+  signedOnly: boolean,
   viaJob: boolean,
 ): Promise<File | null> {
+  const pieceNameFilter = signedOnly
+    ? `BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN (ondertekend)") AS ?pieceName)`
+    : `BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)`;
   const queryString = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
@@ -32,7 +36,7 @@ async function getOldBundleFile(
       ?meeting a besluit:Vergaderactiviteit .
       ?meeting ext:numberRepresentation ?numberRepresentation .
       ?meeting ext:zittingDocumentversie ?piece .
-      BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)
+      ${pieceNameFilter}
       ?piece dct:title ?pieceName .
       ?piece prov:value ?file .
       ?file a nfo:FileDataObject .
@@ -54,8 +58,13 @@ async function getOldBundleFile(
 
 async function getReportFiles(
   reportIds: string[],
-  viaJob: boolean
+  signedOnly: boolean,
+  viaJob: boolean,
 ): Promise<{ report: string, physicalFile: string }[] | null> {
+  const fileFilter = signedOnly
+        ? `?report sign:getekendStukKopie/prov:value/^nie:dataSource ?physicalFile .`
+        : `?report prov:value/^nie:dataSource ?physicalFile .`;
+
   const queryString = `
 PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
 PREFIX sign: <http://mu.semte.ch/vocabularies/ext/handtekenen/>
@@ -70,9 +79,7 @@ WHERE {
   VALUES ?reportId { ${reportIds.map(sparqlEscapeString).join(' ')} }
   GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
     ?report mu:uuid ?reportId .
-    ?report prov:value/^nie:dataSource ?originalPhysicalFile .
-    OPTIONAL { ?report sign:getekendStukKopie/prov:value/^nie:dataSource ?signedPhysicalFile }
-    BIND(COALESCE(?signedPhysicalFile, ?originalPhysicalFile) AS ?physicalFile)
+    ${fileFilter}
     ?report dct:title ?reportName .
     ?report besluitvorming:beschrijft ?decisionActivity .
     ?treatment besluitvorming:heeftBeslissing ?decisionActivity .
@@ -102,6 +109,7 @@ WHERE {
 async function attachToMeeting(
   meetingId: string,
   fileMeta: FileMeta,
+  signedOnly: boolean,
   viaJob: boolean
 ) {
   const pieceUuid = uuid();
@@ -111,6 +119,13 @@ async function attachToMeeting(
   const documentContainerUri = `${config.DOCUMENT_CONTAINER_RESOURCE_BASE}${documentContainerUuid}`;
 
   const now = new Date();
+
+  const accessLevel = signedOnly
+    ? config.INTERN_OVERHEID
+    : config.VERTROUWELIJK;
+  const pieceNameFilter = signedOnly
+    ? `BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN (ondertekend)") AS ?pieceName)`
+    : `BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)`;
 
   const insertPieceQueryString = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -127,7 +142,7 @@ async function attachToMeeting(
       ${sparqlEscapeUri(pieceUri)} a dossier:Stuk ;
         mu:uuid ${sparqlEscapeString(pieceUuid)} ;
         dct:title ?pieceName ;
-        besluitvorming:vertrouwelijkheidsniveau ${sparqlEscapeUri(config.INTERN_OVERHEID)} ;
+        besluitvorming:vertrouwelijkheidsniveau ${sparqlEscapeUri(accessLevel)} ;
         dct:created ${sparqlEscapeDateTime(now)} ;
         dct:modified ${sparqlEscapeDateTime(now)} .
       ${sparqlEscapeUri(documentContainerUri)} a dossier:Serie ;
@@ -142,7 +157,7 @@ async function attachToMeeting(
       ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
       ?meeting a besluit:Vergaderactiviteit .
       ?meeting ext:numberRepresentation ?numberRepresentation .
-      BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)
+      ${pieceNameFilter}
       FILTER NOT EXISTS {
         ?meeting ext:zittingDocumentversie ?piece .
         ?piece dct:title ?pieceName .
@@ -174,7 +189,7 @@ async function attachToMeeting(
       ?meeting a besluit:Vergaderactiviteit .
       ?meeting ext:numberRepresentation ?numberRepresentation .
       ?meeting ext:zittingDocumentversie ?piece .
-      BIND(CONCAT(REPLACE(?numberRepresentation, "/", "-"), " - ALLE BESLISSINGEN") AS ?pieceName)
+      ${pieceNameFilter}
       ?piece dct:title ?pieceName .
       OPTIONAL { ?piece dct:modified ?modified .}
       OPTIONAL { ?piece prov:value ?file .}
@@ -195,13 +210,14 @@ async function attachToMeeting(
 export async function generateReportBundle(
   reportIds: string[],
   requestHeaders,
+  signedOnly: boolean = false,
   viaJob: boolean = false,
 ) {
 
   if (reportIds.length === 0) return;
 
   console.debug('############## Getting individual report files');
-  const reportFileUris = await getReportFiles(reportIds, viaJob);
+  const reportFileUris = await getReportFiles(reportIds, signedOnly, viaJob);
 
   if (reportFileUris === null || reportFileUris.length === 0) return;
 
@@ -211,7 +227,7 @@ export async function generateReportBundle(
 
 
   console.debug('############## Getting old bundle file');
-  const oldFile = await getOldBundleFile(meetingId, viaJob);
+  const oldFile = await getOldBundleFile(meetingId, signedOnly, viaJob);
 
   const mergedPdf = await PDFDocument.create();
 
@@ -233,7 +249,7 @@ export async function generateReportBundle(
 
   if (fileMeta) {
     console.debug('############## Attaching bundle PDF to meeting');
-    await attachToMeeting(meetingId, fileMeta, viaJob);
+    await attachToMeeting(meetingId, fileMeta, signedOnly, viaJob);
     if (oldFile) {
       console.debug('############## Deleting old bundle file');
       deleteFile(requestHeaders, oldFile);

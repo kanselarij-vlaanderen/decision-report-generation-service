@@ -48,7 +48,9 @@ app.post("/generate-reports-bundle", async function (req, res, next) {
     return next({ message: 'Reports cannot be empty' });
   }
   try {
-    const bundleGenerationJob = await createJob(req.body.reports, req.headers, true);
+    const isSignedBundleJob = !!req.body.signedOnly ?? false;
+    const isBundleJob = !isSignedBundleJob;
+    const bundleGenerationJob = await createJob(req.body.reports, req.headers, isBundleJob, isSignedBundleJob);
     res.status(200);
     res.send(JSON.stringify(bundleGenerationJob));
     jobManager.run();

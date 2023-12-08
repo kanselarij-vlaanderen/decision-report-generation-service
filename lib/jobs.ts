@@ -45,7 +45,7 @@ export class JobManager {
   }
 }
 
-export async function createJob(reportUris, requestHeaders, isBundleJob = false) {
+export async function createJob(reportUris, requestHeaders, isBundleJob = false, isSignedBundleJob = false) {
   const jobUuid = uuid();
   const jobUri = `http://data.kaleidos.vlaanderen.be/report-generation-jobs/${jobUuid}`;
   jobRequestHeaders[jobUuid] = requestHeaders; // TODO: find a better way
@@ -54,7 +54,12 @@ export async function createJob(reportUris, requestHeaders, isBundleJob = false)
   const reportsObject = (reportUris || []).map((reportUri) => (
     `${sparqlEscapeUri(reportUri)}`
   )).join(', ');
-  const classes = isBundleJob ? 'ext:ReportGenerationJob, ext:ReportBundleGenerationJob' : 'ext:ReportGenerationJob';
+  let classes = 'ext:ReportGenerationJob';
+  if (isBundleJob) {
+    classes += ', ext:ReportBundleGenerationJob';
+  } else if (isSignedBundleJob) {
+    classes += ', ext:ReportSignedBundleGenerationJob';
+  }
 
   await update(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -119,7 +124,7 @@ async function getNextScheduledJob() {
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
-  SELECT ?uri ?id ?status ?isBundleJob
+  SELECT ?uri ?id ?status ?isBundleJob ?isSignedBundleJob
   WHERE {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       VALUES ?status {
@@ -131,6 +136,8 @@ async function getNextScheduledJob() {
            adms:status ?status .
       OPTIONAL { ?uri a ext:ReportBundleGenerationJob BIND(true AS ?hasBundleClass) }
       BIND(BOUND(?hasBundleClass) AS ?isBundleJob)
+      OPTIONAL { ?uri a ext:ReportSignedBundleGenerationJob BIND(true AS ?hasSignedBundleClass) }
+      BIND(BOUND(?hasSignedBundleClass) AS ?isSignedBundleJob)
       FILTER NOT EXISTS {
         ?job a ext:ReportGenerationJob ;
            adms:status ${sparqlEscapeUri(config.job.statuses.ongoing)} .
@@ -144,7 +151,8 @@ async function getNextScheduledJob() {
       id: bindings[0]['id'].value,
       uri: bindings[0]['uri'].value,
       status: bindings[0]['status'].value,
-      isBundleJob: bindings[0]['isBundleJob'].value,
+      isBundleJob: bindings[0]['isBundleJob'].value === '1',
+      isSignedBundleJob: bindings[0]['isSignedBundleJob'].value === '1',
     };
     job['reportIds'] = await getReportIds(job);
     return job;
@@ -214,7 +222,9 @@ async function executeJob(job) {
     await updateJobStatus(job.uri, config.job.statuses.ongoing);
 
     if (job.isBundleJob) {
-      await generateReportBundle(job.reportIds, jobRequestHeaders[job.id], true);
+      await generateReportBundle(job.reportIds, jobRequestHeaders[job.id], false, true);
+    } else if (job.isSignedBundleJob) {
+      await generateReportBundle(job.reportIds, jobRequestHeaders[job.id], true, true);
     } else {
       for (const reportId of job.reportIds) {
         await generateReport(reportId, jobRequestHeaders[job.id], true);
