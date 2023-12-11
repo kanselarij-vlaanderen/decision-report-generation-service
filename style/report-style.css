@@ -191,3 +191,19 @@ ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:
 ol[data-list-style=decimal-extended] > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) > li > ol:not([data-list-style]) ol:not([data-list-style]) {
   list-style-type: inherit;
 }
+
+[data-indentation-level='1'] {
+  margin-left: 2.6rem;
+}
+
+[data-indentation-level='2'] {
+  margin-left: 5.2rem;
+}
+
+[data-indentation-level='3'] {
+  margin-left: 7.8rem;
+}
+
+[data-indentation-level='4'] {
+  margin-left: 10.4rem;
+}
