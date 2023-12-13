@@ -69,7 +69,6 @@ table td {
   font-size: 12pt;
   margin-top: 6rem;
   margin-right: 6rem;
-  float: inline-start;
   display: flex;
   justify-content: flex-end;
 }
