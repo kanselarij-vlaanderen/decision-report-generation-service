@@ -1,3 +1,7 @@
+function isTruthy(value) {
+  return [true, "true", 1, "1", "yes", "Y", "on"].includes(value);
+}
+
 const FILE_RESOURCE_BASE = 'http://themis.vlaanderen.be/id/bestand/';
 const STORAGE_PATH = `/share`;
 const STORAGE_URI = `share://`;
@@ -22,6 +26,10 @@ const signFlows = {
   }
 }
 
+const ENABLE_DEBUG_WRITE_GENERATED_HTML = isTruthy(
+  process.env.ENABLE_DEBUG_WRITE_GENERATED_HTML
+);
+
 export default {
   FILE_RESOURCE_BASE,
   STORAGE_PATH,
@@ -29,4 +37,5 @@ export default {
   graph,
   job,
   signFlows,
+  ENABLE_DEBUG_WRITE_GENERATED_HTML
 };
