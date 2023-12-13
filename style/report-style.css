@@ -65,11 +65,13 @@ table td {
   text-align: center;
 }
 
-.signature {
+.signature-container {
   font-size: 12pt;
   margin-top: 6rem;
   margin-right: 6rem;
-  float: right;
+  float: inline-start;
+  display: flex;
+  justify-content: flex-end;
 }
 
 
