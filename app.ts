@@ -1,6 +1,7 @@
 import { app, errorHandler } from "mu";
 import { createJob, getJob, JobManager } from "./lib/jobs";
-import { generateReport, generateReportBundle } from "./lib/report-generation";
+import { generateReport } from "./lib/report-generation";
+import { getReportsForMeeting } from "./lib/bundle-generation";
 import { CronJob } from 'cron';
 
 const jobManager = new JobManager();
@@ -44,13 +45,13 @@ app.post("/generate-reports", async function (req, res, next) {
 });
 
 app.post("/generate-reports-bundle", async function (req, res, next) {
-  if (!req.body?.reports || req.body.reports.length === 0) {
-    return next({ message: 'Reports cannot be empty' });
+  if (!req.body?.meetingId) {
+    return next({ message: 'Meeting id cannot be empty' });
   }
   try {
-    const isSignedBundleJob = !!req.body.signedOnly ?? false;
-    const isBundleJob = !isSignedBundleJob;
-    const bundleGenerationJob = await createJob(req.body.reports, req.headers, isBundleJob, isSignedBundleJob);
+    const reports = await getReportsForMeeting(req.body.meetingId);
+    const isBundleJob = true;
+    const bundleGenerationJob = await createJob(reports, req.headers, isBundleJob);
     res.status(200);
     res.send(JSON.stringify(bundleGenerationJob));
     jobManager.run();
