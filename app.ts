@@ -31,7 +31,7 @@ app.get("/:id", async function (req, res, next) {
 */
 app.post("/generate-reports", async function (req, res, next) {
   if (!req.body?.reports || req.body.reports.length === 0) {
-    return next({ message: 'Reports cannot be emtpy' });
+    return next({ message: 'Reports cannot be empty' });
   }
   try {
     const generationJob = await createJob(req.body.reports, req.headers);

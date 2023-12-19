@@ -35,7 +35,7 @@ export async function getReportsForMeeting(
       ?agenda dct:hasPart ?agendaitem .
       ?decisionActivity ^besluitvorming:heeftBeslissing/dct:subject ?agendaitem .
       ?report besluitvorming:beschrijft ?decisionActivity .
-      ?report besluitvorming:vertrouwelijkheidsniveau ${sparqlEscapeUri("http://themis.vlaanderen.be/id/concept/toegangsniveau/634f438e-0d62-4ae4-923a-b63460f6bc46")} .
+      ?report besluitvorming:vertrouwelijkheidsniveau ${sparqlEscapeUri(config.INTERN_OVERHEID)} .
   
       FILTER NOT EXISTS { ?nextAgenda prov:wasRevisionOf ?agenda }
     }
