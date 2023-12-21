@@ -1,3 +1,7 @@
+function isTruthy(value) {
+  return [true, "true", 1, "1", "yes", "Y", "on"].includes(value);
+}
+
 const PIECE_RESOURCE_BASE = 'http://themis.vlaanderen.be/id/stuk/';
 const DOCUMENT_CONTAINER_RESOURCE_BASE = 'http://themis.vlaanderen.be/id/serie/';
 const FILE_RESOURCE_BASE = 'http://themis.vlaanderen.be/id/bestand/';
@@ -29,6 +33,10 @@ const signFlows = {
   }
 }
 
+const ENABLE_DEBUG_WRITE_GENERATED_HTML = isTruthy(
+  process.env.ENABLE_DEBUG_WRITE_GENERATED_HTML
+);
+
 export default {
   PIECE_RESOURCE_BASE,
   DOCUMENT_CONTAINER_RESOURCE_BASE,
@@ -41,4 +49,5 @@ export default {
   graph,
   job,
   signFlows,
+  ENABLE_DEBUG_WRITE_GENERATED_HTML
 };
