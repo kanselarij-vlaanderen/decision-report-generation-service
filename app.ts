@@ -1,6 +1,7 @@
 import { app, errorHandler } from "mu";
 import { createJob, getJob, JobManager } from "./lib/jobs";
 import { generateReport } from "./lib/report-generation";
+import { getReportsForMeeting } from "./lib/bundle-generation";
 import { CronJob } from 'cron';
 
 const jobManager = new JobManager();
@@ -30,8 +31,7 @@ app.get("/:id", async function (req, res, next) {
 */
 app.post("/generate-reports", async function (req, res, next) {
   if (!req.body?.reports || req.body.reports.length === 0) {
-    next({ message: 'Reports cannot be emtpy' });
-    return;
+    return next({ message: 'Reports cannot be empty' });
   }
   try {
     const generationJob = await createJob(req.body.reports, req.headers);
@@ -39,6 +39,23 @@ app.post("/generate-reports", async function (req, res, next) {
     res.send(JSON.stringify(generationJob));
     jobManager.run();
   } catch (e) {
+    console.error(e);
+    next({ message: e.message, status: 500 });
+  }
+});
+
+app.post("/generate-reports-bundle", async function (req, res, next) {
+  if (!req.body?.meetingId) {
+    return next({ message: 'Meeting id cannot be empty' });
+  }
+  try {
+    const reports = await getReportsForMeeting(req.body.meetingId);
+    const isBundleJob = true;
+    const bundleGenerationJob = await createJob(reports, req.headers, isBundleJob);
+    res.status(200);
+    res.send(JSON.stringify(bundleGenerationJob));
+    jobManager.run();
+  } catch(e) {
     console.error(e);
     next({ message: e.message, status: 500 });
   }

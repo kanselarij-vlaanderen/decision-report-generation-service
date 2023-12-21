@@ -8,15 +8,15 @@ import constants from "../constants";
 import { addLeadingZeros, formatDate } from "./utils";
 import * as fs from "fs";
 
-export function createStyleHeader() {
+function createStyleHeader() {
   const styles = fs.readFileSync("/app/style/report-style.css").toString();
 
   return `
-  <head>
-    <style>
-      ${styles}
-    </style>
-  </head>`;
+<head>
+  <style>
+    ${styles}
+  </style>
+</head>`;
 }
 
 function meetingKindTitle(meeting: Meeting) {
@@ -52,7 +52,7 @@ function meetingKindTitle(meeting: Meeting) {
   return meetingKindTitle;
 }
 
-export function renderReport(
+function generateReportContent(
   reportParts: ReportParts,
   reportContext: ReportContext,
   secretary: Secretary | null
@@ -214,4 +214,14 @@ export function renderReport(
   </div>
   `;
   return reportHtml;
+}
+
+export function generateReportHtml(
+  reportParts: ReportParts,
+  reportContext: ReportContext,
+  secretary: Secretary | null
+): string {
+  return `
+${createStyleHeader()}
+${generateReportContent(reportParts, reportContext, secretary)}`;
 }

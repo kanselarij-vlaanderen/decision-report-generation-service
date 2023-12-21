@@ -8,7 +8,7 @@ import {
 } from "mu";
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { createFile, PhysicalFile, VirtualFile, FileMeta } from "./file";
-import { renderReport, createStyleHeader } from "./render-report";
+import { generateReportHtml } from "./render-report";
 import config from "../config";
 import constants from "../constants";
 import sanitizeHtml from "sanitize-html";
@@ -23,8 +23,9 @@ export interface ReportParts {
 }
 
 export interface Meeting {
+  id: string;
   plannedStart: Date;
-  numberRepresentation: number;
+  numberRepresentation: string;
   kind: string;
   mainMeetingKind: string | null;
 }
@@ -59,7 +60,7 @@ function generateReportFileName(reportContext: ReportContext): string {
   return `${reportContext.currentReportName}.pdf`.replace('/', '-');
 }
 
-async function deleteFile(requestHeaders, file: File) {
+export async function deleteFile(requestHeaders, file: File) {
   try {
     const response = await fetch(`http://file/files/${file.id}`, {
       method: "delete",
@@ -95,8 +96,7 @@ async function retrieveOldFile(
       ?file a nfo:FileDataObject .
       ?file mu:uuid ?fileId .
     }
-  }
-  `;
+  }`;
 
   let queryResult;
   if (viaJob) {
@@ -111,60 +111,18 @@ async function retrieveOldFile(
   return null;
 }
 
-async function generatePdf(
-  reportParts: ReportParts,
-  reportContext: ReportContext,
-  secretary: Secretary | null
-): Promise<VirtualFile> {
-  const html = renderReport(reportParts, reportContext, secretary);
-  const htmlString = `${createStyleHeader()}${html}`;
-  if (config.ENABLE_DEBUG_WRITE_GENERATED_HTML) {
-    fs.writeFileSync(
-      '/debug/rendered_decision_report.html', 
-      htmlString
-    );
-  }
+async function renderHtml(html: string): Promise<Buffer> {
   const response = await fetch("http://html-to-pdf/generate", {
     method: "POST",
     headers: {
       "Content-Type": "text/html",
     },
-    body: htmlString,
+    body: html,
   });
 
   if (response.ok) {
     const buffer = await response.buffer();
-
-    const now = new Date();
-    const physicalUuid = generateUuid();
-    const physicalName = `${physicalUuid}.pdf`
-    const filePath = `${config.STORAGE_PATH}/${physicalName}`;
-
-    const physicalFile: PhysicalFile = {
-      id: physicalUuid,
-      uri: filePath.replace('/share/', 'share://'),
-      name: physicalName,
-      extension: "pdf",
-      size: buffer.byteLength,
-      created: now,
-      format: "application/pdf",
-    };
-
-    const virtualUuid = generateUuid();
-    const fileName = generateReportFileName(reportContext);
-    const file: VirtualFile =   {
-      id: virtualUuid,
-      uri: `${config.FILE_RESOURCE_BASE}${virtualUuid}`,
-      name: fileName,
-      extension: "pdf",
-      size: buffer.byteLength,
-      created: now,
-      format: "application/pdf",
-      physicalFile,
-    };
-    fs.writeFileSync(filePath, buffer);
-    await createFile(file);
-    return file;
+    return buffer;
   } else {
     if (response.headers["Content-Type"] === "application/vnd.api+json") {
       const errorResponse = await response.json();
@@ -175,6 +133,38 @@ async function generatePdf(
     }
     throw new Error("Something went wrong while generating the pdf");
   }
+}
+
+export async function storePdf(fileName: string, buffer: Buffer | Uint8Array, viaJob: boolean) {
+  const now = new Date();
+  const physicalUuid = generateUuid();
+  const physicalName = `${physicalUuid}.pdf`
+  const filePath = `${config.STORAGE_PATH}/${physicalName}`;
+
+  const physicalFile: PhysicalFile = {
+    id: physicalUuid,
+    uri: filePath.replace('/share/', 'share://'),
+    name: physicalName,
+    extension: "pdf",
+    size: buffer.byteLength,
+    created: now,
+    format: "application/pdf",
+  };
+
+  const virtualUuid = generateUuid();
+  const file: VirtualFile =   {
+    id: virtualUuid,
+    uri: `${config.FILE_RESOURCE_BASE}${virtualUuid}`,
+    name: fileName,
+    extension: "pdf",
+    size: buffer.byteLength,
+    created: now,
+    format: "application/pdf",
+    physicalFile,
+  };
+  fs.writeFileSync(filePath, buffer);
+  await createFile(file, viaJob);
+  return file;
 }
 
 async function retrieveReportParts(
@@ -280,7 +270,7 @@ async function retrieveReportSecretary(
   return null;
 }
 
-async function retrieveContext(
+export async function retrieveContext(
   reportId: string,
   viaJob: boolean
 ): Promise<ReportContext> {
@@ -294,7 +284,9 @@ async function retrieveContext(
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX schema: <http://schema.org/>
 
-  SELECT DISTINCT ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingType ?mainMeetingType ?agendaItemType ?accessLevel ?currentReportName WHERE {
+  SELECT DISTINCT
+  ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingId ?meetingType ?mainMeetingType ?agendaItemType ?accessLevel ?currentReportName
+  WHERE {
     GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
@@ -302,6 +294,7 @@ async function retrieveContext(
       ?report besluitvorming:beschrijft/^besluitvorming:heeftBeslissing/dct:subject ?agendaItem .
       ?report besluitvorming:vertrouwelijkheidsniveau ?accessLevel .
       ?agendaItem ^dct:hasPart/besluitvorming:isAgendaVoor ?meeting .
+      ?meeting mu:uuid ?meetingId .
       ?meeting ext:numberRepresentation ?numberRepresentation .
       ?meeting besluit:geplandeStart ?geplandeStart .
       ?meeting dct:type ?meetingType .
@@ -329,6 +322,7 @@ async function retrieveContext(
           geplandeStart,
           agendaItemNumber,
           agendaItemType,
+          meetingId,
           meetingType,
           mainMeetingType,
           accessLevel,
@@ -340,6 +334,7 @@ async function retrieveContext(
 
   return {
     meeting: {
+      id: meetingId.value,
       plannedStart: new Date(geplandeStart.value),
       numberRepresentation: numberRepresentation.value,
       kind: meetingType.value,
@@ -433,11 +428,14 @@ export async function generateReport(
 
   const oldFile = await retrieveOldFile(reportId, viaJob);
   const sanitizedParts = sanitizeReportParts(reportParts);
-  const fileMeta = await generatePdf(
-    sanitizedParts,
-    reportContext,
-    secretary
+  const reportHtml = generateReportHtml(sanitizedParts, reportContext, secretary);
+  const pdfBuffer = await renderHtml(reportHtml);
+  const fileMeta = await storePdf(
+    generateReportFileName(reportContext),
+    pdfBuffer,
+    viaJob,
   );
+
   if (fileMeta) {
     await attachToReport(reportId, fileMeta, viaJob);
     if (oldFile) {

@@ -1,9 +1,9 @@
-import { query, update } from 'mu';
+import { update } from 'mu';
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { sparqlEscapeString, sparqlEscapeUri, sparqlEscapeDateTime, uuid } from 'mu';
 import config from '../config';
-
 import { generateReport } from "./report-generation";
+import { generateReportBundle } from './bundle-generation';
 
 // NOTE: this is a crutch, as generateReport needs the headers, but we can't store them
 const jobRequestHeaders = {};
@@ -45,7 +45,7 @@ export class JobManager {
   }
 }
 
-export async function createJob(reportUris, requestHeaders) {
+export async function createJob(reportUris: [string] | [],  requestHeaders, isBundleJob = false) {
   const jobUuid = uuid();
   const jobUri = `http://data.kaleidos.vlaanderen.be/report-generation-jobs/${jobUuid}`;
   jobRequestHeaders[jobUuid] = requestHeaders; // TODO: find a better way
@@ -54,6 +54,10 @@ export async function createJob(reportUris, requestHeaders) {
   const reportsObject = (reportUris || []).map((reportUri) => (
     `${sparqlEscapeUri(reportUri)}`
   )).join(', ');
+  let classes = 'ext:ReportGenerationJob';
+  if (isBundleJob) {
+    classes += ', ext:ReportBundleGenerationJob';
+  }
 
   await update(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -64,7 +68,7 @@ export async function createJob(reportUris, requestHeaders) {
 
   INSERT DATA {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
-        ${sparqlEscapeUri(jobUri)} a ext:ReportGenerationJob ;
+        ${sparqlEscapeUri(jobUri)} a ${classes} ;
                mu:uuid ${sparqlEscapeString(jobUuid)} ;
                prov:used ${reportsObject} ;
                adms:status ${sparqlEscapeUri(config.job.statuses.scheduled)} ;
@@ -86,14 +90,23 @@ async function getReportIds(job) {
   const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
+  PREFIX dct: <http://purl.org/dc/terms/>
+  PREFIX schema: <http://schema.org/>
+  PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
 
-  SELECT ?report ?reportId
+  SELECT DISTINCT ?report ?reportId
   WHERE {
-    GRAPH ${sparqlEscapeUri(config.job.graph)} {
-      ${sparqlEscapeUri(job.uri)} prov:used ?report .
+    GRAPH ${sparqlEscapeUri(config.job.graph)} { ${sparqlEscapeUri(job.uri)} prov:used ?report }
+    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
       ?report mu:uuid ?reportId .
+      ?report dct:title ?reportName .
+      ?report besluitvorming:beschrijft ?decisionActivity .
+      ?treatment besluitvorming:heeftBeslissing ?decisionActivity .
+      ?treatment dct:subject ?agendaitem .
+      ?agendaitem dct:type ?agendaitemType .
     }
-  }`);
+    GRAPH ${sparqlEscapeUri(config.graph.public)} { ?agendaitemType schema:position ?typeOrder }
+  } ORDER BY ?typeOrder ?reportName`);
   const bindings = result.results.bindings;
   if (bindings.length > 0) {
     return bindings.map((binding) => binding['reportId'].value);
@@ -109,7 +122,7 @@ async function getNextScheduledJob() {
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
-  SELECT ?uri ?id ?status
+  SELECT ?uri ?id ?status ?isBundleJob
   WHERE {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       VALUES ?status {
@@ -119,6 +132,8 @@ async function getNextScheduledJob() {
            mu:uuid ?id ;
            dct:created ?created ;
            adms:status ?status .
+      OPTIONAL { ?uri a ext:ReportBundleGenerationJob BIND(true AS ?hasBundleClass) }
+      BIND(BOUND(?hasBundleClass) AS ?isBundleJob)
       FILTER NOT EXISTS {
         ?job a ext:ReportGenerationJob ;
            adms:status ${sparqlEscapeUri(config.job.statuses.ongoing)} .
@@ -132,6 +147,7 @@ async function getNextScheduledJob() {
       id: bindings[0]['id'].value,
       uri: bindings[0]['uri'].value,
       status: bindings[0]['status'].value,
+      isBundleJob: bindings[0]['isBundleJob'].value === '1',
     };
     job['reportIds'] = await getReportIds(job);
     return job;
@@ -199,9 +215,15 @@ async function updateJobStatus(uri, status) {
 async function executeJob(job) {
   try {
     await updateJobStatus(job.uri, config.job.statuses.ongoing);
-    for (const reportId of job.reportIds) {
-      await generateReport(reportId, jobRequestHeaders[job.id], true);
+
+    if (job.isBundleJob) {
+      await generateReportBundle(job.reportIds, jobRequestHeaders[job.id], true);
+    } else {
+      for (const reportId of job.reportIds) {
+        await generateReport(reportId, jobRequestHeaders[job.id], true);
+      }
     }
+
     await updateJobStatus(job.uri, config.job.statuses.success);
     delete jobRequestHeaders[job.id];
     console.log('**************************************');
