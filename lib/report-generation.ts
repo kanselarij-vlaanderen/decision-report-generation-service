@@ -118,6 +118,12 @@ async function generatePdf(
 ): Promise<VirtualFile> {
   const html = renderReport(reportParts, reportContext, secretary);
   const htmlString = `${createStyleHeader()}${html}`;
+  if (config.ENABLE_DEBUG_WRITE_GENERATED_HTML) {
+    fs.writeFileSync(
+      '/debug/rendered_decision_report.html', 
+      htmlString
+    );
+  }
   const response = await fetch("http://html-to-pdf/generate", {
     method: "POST",
     headers: {
