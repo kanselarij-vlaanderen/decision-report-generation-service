@@ -109,12 +109,17 @@ WHERE {
   VALUES ?reportId { ${reportIds.map(sparqlEscapeString).join(' ')} }
   GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
     ?report mu:uuid ?reportId .
-    ?report sign:getekendStukKopie/prov:value/^nie:dataSource ?physicalFile .
+    ?report prov:value/^nie:dataSource ?originalFile .
+    OPTIONAL {
+      ?report sign:getekendStukKopie/prov:value/^nie:dataSource ?flattenedFile .
+    }
     ?report dct:title ?reportName .
     ?report besluitvorming:beschrijft ?decisionActivity .
     ?treatment besluitvorming:heeftBeslissing ?decisionActivity .
     ?treatment dct:subject ?agendaitem .
     ?agendaitem dct:type ?agendaitemType .
+
+    BIND(IF(BOUND(?flattenedFile), ?flattenedFile , ?originalFile) AS ?physicalFile)
   }
   GRAPH ${sparqlEscapeUri(config.graph.public)} { ?agendaitemType schema:position ?typeOrder }
 } ORDER BY ?typeOrder ?reportName`;
