@@ -1,6 +1,6 @@
 {
   "name": "decision-report-generation-service",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "",
   "author": "Kobe Mertens",
   "type": "module",
