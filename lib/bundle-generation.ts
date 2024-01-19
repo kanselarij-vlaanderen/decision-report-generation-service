@@ -122,7 +122,7 @@ WHERE {
     BIND(IF(BOUND(?flattenedFile), ?flattenedFile , ?originalFile) AS ?physicalFile)
   }
   GRAPH ${sparqlEscapeUri(config.graph.public)} { ?agendaitemType schema:position ?typeOrder }
-} ORDER BY ?typeOrder ?reportName`;
+} ORDER BY ?typeOrder STR(?reportName)`;
 
   let result;
   if (viaJob) {
