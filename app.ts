@@ -4,6 +4,9 @@ import { generateReport } from "./lib/report-generation";
 import { getReportsForMeeting } from "./lib/bundle-generation";
 import { CronJob } from 'cron';
 
+// on startup
+cleanupOngoingJobs();
+
 const jobManager = new JobManager();
 jobManager.run();
 
@@ -75,8 +78,5 @@ app.get("/job/:id", async function (req, res, next) {
     next({ message: e.message, status: 500 });
   }
 });
-
-// on startup
-cleanupOngoingJobs();
 
 app.use(errorHandler);

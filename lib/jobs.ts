@@ -246,15 +246,15 @@ export async function cleanupOngoingJobs() {
 
   DELETE {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
-      ?uri adms:status <http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/ongoing> .
+      ?uri adms:status ${sparqlEscapeUri(config.job.statuses.ongoing)} .
     } } 
   INSERT {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
-      ?uri adms:status <http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/failure> .
+      ?uri adms:status ${sparqlEscapeUri(config.job.statuses.failure)} .
     } }
   WHERE {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       ?uri a ext:ReportGenerationJob ;
-      ?uri adms:status <http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/ongoing> .
+           adms:status ${sparqlEscapeUri(config.job.statuses.ongoing)} .
     }}`);
 }
