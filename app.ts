@@ -1,5 +1,5 @@
 import { app, errorHandler } from "mu";
-import { createJob, getJob, JobManager } from "./lib/jobs";
+import { createJob, getJob, JobManager, cleanupOngoingJobs } from "./lib/jobs";
 import { generateReport } from "./lib/report-generation";
 import { getReportsForMeeting } from "./lib/bundle-generation";
 import { CronJob } from 'cron';
@@ -75,5 +75,8 @@ app.get("/job/:id", async function (req, res, next) {
     next({ message: e.message, status: 500 });
   }
 });
+
+// on startup
+cleanupOngoingJobs();
 
 app.use(errorHandler);

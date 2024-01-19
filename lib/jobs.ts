@@ -157,20 +157,21 @@ async function getNextScheduledJob() {
 }
 
 export async function getJob(jobId) {
+  // there may be a split second where the job is not found when the status/modified is being updated
   const result = await querySudo(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
-  SELECT ?uri ?id ?status ?created ?modified
+  SELECT ?uri ?status ?created ?modified
   WHERE {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       ?uri a ext:ReportGenerationJob ;
            mu:uuid ${sparqlEscapeString(jobId)} ;
-           dct:created ?created ;
-           dct:modified ?modified ;
-           adms:status ?status .
+           dct:created ?created .
+      OPTIONAL { ?uri dct:modified ?modified . }
+      OPTIONAL { ?uri adms:status ?status . }
     }
   } ORDER BY ASC(?created) LIMIT 1`);
 
@@ -236,4 +237,24 @@ async function executeJob(job) {
     console.trace(e);
     await updateJobStatus(job.uri, config.job.statuses.failure);
   }
+}
+
+export async function cleanupOngoingJobs() {
+  await updateSudo(`
+  PREFIX adms: <http://www.w3.org/ns/adms#>
+  PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
+
+  DELETE {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
+      ?uri adms:status <http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/ongoing> .
+    } } 
+  INSERT {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
+      ?uri adms:status <http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/failure> .
+    } }
+  WHERE {
+    GRAPH ${sparqlEscapeUri(config.job.graph)} {
+      ?uri a ext:ReportGenerationJob ;
+      ?uri adms:status <http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/ongoing> .
+    }}`);
 }
