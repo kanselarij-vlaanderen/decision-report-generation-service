@@ -53,6 +53,9 @@ app.post("/generate-reports-bundle", async function (req, res, next) {
   }
   try {
     const reports = await getReportsForMeeting(req.body.meetingId);
+    if (!reports.length) {
+      return next({ message: 'No reports found that are suitable for bundling. Only reports with access-level "intern-overheid" are bundled.' });
+    }
     const isBundleJob = true;
     const bundleGenerationJob = await createJob(reports, req.headers, isBundleJob);
     res.status(200);
