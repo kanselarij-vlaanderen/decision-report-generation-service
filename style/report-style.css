@@ -67,8 +67,9 @@ table td {
 
 .signature-container {
   font-size: 12pt;
-  margin-top: 4.5rem;
-  margin-right: 6rem;
+  padding-top: 4rem;
+  padding-right: 6rem;
+  margin: 0;
   display: flex;
   justify-content: flex-end;
 }
@@ -78,6 +79,8 @@ ol:not(.au-c-list-horizontal) {
   list-style: decimal;
   margin-left: 2.6rem;
   padding-left: 0;
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
 }
 
 ol:not(.au-c-list-horizontal)[data-list-style='decimal'] {
@@ -95,6 +98,8 @@ ol:not(.au-c-list-horizontal)[data-list-style='lower-alpha'] {
 ol:not(.au-c-list-horizontal)[data-list-style='upper-alpha'] {
   list-style-type: upper-alpha;
   margin-left: 1rem;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 ol:not(.au-c-list-horizontal)[data-list-style='upper-alpha'] ol {
   margin-left: 1rem;

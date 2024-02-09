@@ -173,7 +173,7 @@ function generateReportContent(
         <p style="font-size: 12pt;">${meetingKindTitle(meeting)}</p>
         <p>________________________________________</p>
       </div>
-      ${confidentialHtml} 
+      ${confidentialHtml}
       ${annotationHtml}
       <p
         style="font-weight: 500; text-decoration: underline; font-size: 12pt;"
@@ -205,8 +205,6 @@ function generateReportContent(
                 ${secretary.person.lastName.toUpperCase()},
               </p>
               <p>${secretary.title}.</p>
-              <br />
-              <br />
             </div>
           </div>`
         : ""
