@@ -7,7 +7,6 @@
   "dependencies": {
     "@lblod/mu-auth-sudo": "^0.6.1",
     "cron": "^1.8.2",
-    "html-pdf-chrome": "0.8.4",
     "node-fetch": "2.7.0",
     "pdf-lib": "^1.17.1",
     "sanitize-html": "2.10.0"
