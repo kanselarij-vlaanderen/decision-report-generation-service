@@ -353,12 +353,25 @@ export async function retrieveContext(
 function sanitizeReportParts(reportParts: ReportParts): ReportParts {
   const { concerns, decision, annotation } = reportParts;
   const additionalAllowedTags = ['del'];
-  const additionalAllowedAttributes = {'ol': ['data-list-style']};
+  const additionalAllowedAttributes = {
+    '*': ['data-indentation-level'],
+    'ol': ['style', 'data-hierarchical', 'data-list-style'],
+    'li': ['data-list-marker'],
+  };
+  const additionalAllowedStyles = {
+    'ol': {
+      'list-style-type': [/.*/]
+    }
+  }
   const options = sanitizeHtml.defaults;
   options.allowedTags = sanitizeHtml.defaults.allowedTags.concat(additionalAllowedTags);
   options.allowedAttributes = { 
     ...sanitizeHtml.defaults.allowedAttributes, 
-    ...additionalAllowedAttributes
+    ...additionalAllowedAttributes,
+  };
+  options.allowedStyles = {
+    ...sanitizeHtml.defaults.allowedStyles,
+    ...additionalAllowedStyles,
   };
   return {
     annotation: annotation ? sanitizeHtml(annotation, sanitizeHtml.defaults) : null,
