@@ -18,10 +18,10 @@ const graph = {
 }
 const job = {
     statuses: {
-      scheduled: 'http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/scheduled',
-      ongoing: 'http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/ongoing',
-      success: 'http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/success',
-      failure: 'http://data.kaleidos.vlaanderen.be/report-generation-job-statuses/failure'
+      scheduled: 'http://vocab.deri.ie/cogs#Scheduled',
+      ongoing: 'http://vocab.deri.ie/cogs#Running',
+      success: 'http://vocab.deri.ie/cogs#Success',
+      failure: 'http://vocab.deri.ie/cogs#Fail'
     },
     graph: graph.kanselarij,
 }
