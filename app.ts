@@ -3,6 +3,8 @@ import { createJob, getJob, JobManager, cleanupOngoingJobs } from "./lib/jobs";
 import { generateReport } from "./lib/report-generation";
 import { getReportsForMeeting } from "./lib/bundle-generation";
 import { CronJob } from 'cron';
+import { generateConcernsPart } from "./lib/render-report";
+import { getAgendaitemData, getAgendaitemPiecesForReport } from "./lib/agendaitem";
 
 // on startup
 cleanupOngoingJobs();
@@ -26,6 +28,30 @@ app.get("/:id", async function (req, res, next) {
     console.error(e);
     next({ message: e.message, status: 500 });
   }
+});
+
+app.post("/generate-concerns/:id", async function(req, res, next) {
+  const agendaitemId = req.params.id;
+  if (!agendaitemId) {
+    return res.status(400).send("No agendaitem id supplied");
+  }
+  const agendaitem = await getAgendaitemData(
+    req.params.id
+  );
+  if (!agendaitem) {
+    return res.status(404).send("No agendaitem with this id");
+  }
+  const { shortTitle, title, isApproval, subcaseName } = agendaitem;
+  const pieces = await getAgendaitemPiecesForReport(agendaitemId, isApproval);
+  const concerns = generateConcernsPart(
+    shortTitle,
+    title,
+    isApproval,
+    pieces.map((piece: any) => piece.name),
+    subcaseName
+  );
+
+  return res.end();
 });
 
 /*

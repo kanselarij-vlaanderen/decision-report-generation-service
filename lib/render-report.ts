@@ -5,8 +5,10 @@ import {
   Secretary,
 } from "./report-generation";
 import constants from "../constants";
-import { addLeadingZeros, formatDate } from "./utils";
+import { addLeadingZeros, capitalizeFirstLetter, formatDate } from "./utils";
 import * as fs from "fs";
+import VRNotulenName from "./vr-notulen-name";
+import VRDocumentName from "./vr-document-name";
 
 function createStyleHeader() {
   const styles = fs.readFileSync("/app/style/report-style.css").toString();
@@ -50,6 +52,69 @@ function meetingKindTitle(meeting: Meeting) {
     meetingKindTitle += `<br />Plan Vlaamse Veerkracht`;
   }
   return meetingKindTitle;
+}
+
+export function generateConcernsPart(
+  agendaitemShortTitle: string,
+  agendaitemTitle: string | null,
+  agendaitemIsApproval: boolean,
+  documents: string[],
+  subcaseName: string | null
+): string {
+  let betreft = "";
+  betreft += `${agendaitemShortTitle}`;
+  betreft += agendaitemTitle ? `<br/>${agendaitemTitle}` : "";
+  betreft += subcaseName ? `<br/>${capitalizeFirstLetter(subcaseName)}` : "";
+  betreft +=
+    documents && documents.length
+      ? `<br/>${formatDocuments(documents, agendaitemIsApproval)}`
+      : "";
+
+  return betreft;
+}
+
+function formatDocuments(documents: string[], isApproval: boolean) {
+  const simplifiedNames: any[] = [];
+  let previousVrModel: VRDocumentName | null = null;
+  for (const pieceName of documents) {
+    if (isApproval) {
+      try {
+        simplifiedNames.push(new VRNotulenName(pieceName).vrNumberWithSuffix());
+      } catch {
+        simplifiedNames.push(pieceName);
+      }
+      continue;
+    }
+    try {
+      const vrModel = new VRDocumentName(pieceName);
+      const vrDateOnly = vrModel.vrDateOnly();
+      // if the date part of the previous VR number is the same we don't repeat it
+      const previousVrDate = previousVrModel?.vrDateOnly();
+      if (previousVrDate === vrDateOnly) {
+        simplifiedNames.push(vrModel.withoutDate());
+      } else {
+        simplifiedNames.push(vrModel.vrNumberWithSuffix());
+      }
+      previousVrModel = vrModel;
+    } catch {
+      simplifiedNames.push(pieceName);
+      previousVrModel = null;
+      continue;
+    }
+  }
+  return `(${formatListNl(simplifiedNames)})`;
+}
+
+function formatListNl(items: string[]): string {
+  if (items.length === 0) {
+    return '';
+  } else if (items.length === 1) {
+    return items[0];
+  } else {
+    return `${items.slice(0, -1).join(", ")} en ${
+      items[items.length - 1]
+    }`;
+  }
 }
 
 function generateReportContent(
