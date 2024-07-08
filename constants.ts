@@ -13,5 +13,23 @@ export default {
   },
   ACCESS_LEVEL: {
     CONFIDENTIAL: 'http://themis.vlaanderen.be/id/concept/toegangsniveau/9692ba4f-f59b-422b-9402-fcbd30a46d17',
-  }
+  },
+  DOCUMENT_TYPES: {
+    NOTA: 'http://themis.vlaanderen.be/id/concept/document-type/f2b0f655-8ed7-4f61-8f2b-ca813de7a6ed',
+    VISIENOTA: 'http://themis.vlaanderen.be/id/concept/document-type/8ae796bd-690a-4ed6-855c-c4572e883066',
+    DECISION: 'http://themis.vlaanderen.be/id/concept/document-type/e807feec-1958-46cf-a558-3379b5add49e',
+    MB: 'https://data.vlaanderen.be/id/concept/AardWetgeving/MinisterieelBesluit',
+    DECREET: 'https://data.vlaanderen.be/id/concept/AardWetgeving/Decreet',
+    BVR: 'https://data.vlaanderen.be/id/concept/AardWetgeving/BesluitVanDeVlaamseRegering',
+    NOTULEN: 'http://themis.vlaanderen.be/id/concept/document-type/d638e0dc-c879-4a75-9485-9e6970a83d67',
+    BESLISSINGSFICHE: 'http://themis.vlaanderen.be/id/concept/document-type/e807feec-1958-46cf-a558-3379b5add49e',
+    ONTWERPDECREET: 'http://themis.vlaanderen.be/id/concept/document-type/8a1e048a-4b55-4a19-b1c0-c85dba09a15c',
+    MEMORIE: 'http://themis.vlaanderen.be/id/concept/document-type/f036e016-268e-4611-8fee-77d2047b51d8',
+    ADVIES_RVS: "http://themis.vlaanderen.be/id/concept/document-type/73d69df5-c3f3-43b2-aeae-5a24b56b376e",
+    ADVIES_IF: "http://themis.vlaanderen.be/id/concept/document-type/351ba62d-eeff-4b08-b1e3-0a56d38116c4",
+    ADVIES: "http://themis.vlaanderen.be/id/concept/document-type/fb931eff-38f2-4743-802b-4240c35b8b0c",
+    ADVIES_AGO: "http://themis.vlaanderen.be/id/concept/document-type/9c043848-6a9f-4448-9794-600e40dee6d2",
+    BEKRACHTIGING: "http://themis.vlaanderen.be/id/concept/document-type/609cf883-b52c-43fe-84b1-eed02527173b",
+    BIJLAGE_TER_INZAGE: "http://themis.vlaanderen.be/id/concept/document-type/075bc7a9-75fd-423b-be88-571d3fa3d043",
+  },
 };
