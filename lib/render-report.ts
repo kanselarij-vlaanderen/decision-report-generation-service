@@ -132,7 +132,7 @@ function generateReportContent(
     <br />`;
   }
   let confidentialHtml = "";
-  if (reportContext.accessLevel === constants.ACCESS_LEVEL.CONFIDENTIAL) {
+  if (reportContext.accessLevel === constants.ACCESS_LEVELS.VERTROUWELIJK) {
     confidentialHtml = '<p class="confidential-statement">VERTROUWELIJK</p>';
   }
   let reportHtml = `
