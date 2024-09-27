@@ -410,6 +410,7 @@ async function attachToReport(
 export async function generateReport(
   reportId: string,
   requestHeaders,
+  shouldRegenerateConcerns: boolean = false,
   viaJob: boolean = false,
 ) {
   const reportParts = await retrieveReportParts(reportId, viaJob);

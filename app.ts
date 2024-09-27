@@ -3,13 +3,6 @@ import { createJob, getJob, JobManager, cleanupOngoingJobs } from "./lib/jobs";
 import { generateReport } from "./lib/report-generation";
 import { getReportsForMeeting } from "./lib/bundle-generation";
 import { CronJob } from "cron";
-import { generateConcernsPart } from "./lib/render-report";
-import {
-  getAgendaitemData,
-  getAgendaitemPiecesForReport,
-  getRatificationName,
-  updateAgendaitemConcerns,
-} from "./lib/agendaitem";
 
 // on startup
 cleanupOngoingJobs();
@@ -40,35 +33,6 @@ app.get("/:id", async function (req, res, next) {
   }
 });
 
-app.post("/generate-concerns/:id", async function (req, res, next) {
-  const agendaitemId = req.params.id;
-  if (!agendaitemId) {
-    return res.status(400).send("No agendaitem id supplied");
-  }
-  const agendaitem = await getAgendaitemData(req.params.id);
-  if (!agendaitem) {
-    return res.status(404).send("No agendaitem with this id");
-  }
-  const { shortTitle, title, isApproval, subcaseName } = agendaitem;
-  const pieces = await getAgendaitemPiecesForReport(agendaitemId, isApproval);
-  const ratification = await getRatificationName(agendaitemId);
-  const documentNames = pieces.map((piece: any) => piece.name);
-  if (ratification) {
-    documentNames.unshift(ratification);
-  }
-  const concerns = generateConcernsPart(
-    shortTitle,
-    title,
-    isApproval,
-    documentNames,
-    subcaseName
-  );
-
-  await updateAgendaitemConcerns(agendaitemId, concerns);
-
-  return res.end();
-});
-
 /*
   Requires req.body to contain a non-empty array 'reports' with report URIs.
   Returns the ID of the generation job.
@@ -78,7 +42,9 @@ app.post("/generate-reports", async function (req, res, next) {
     return next({ message: "Reports cannot be empty" });
   }
   try {
-    const generationJob = await createJob(req.body.reports, req.headers);
+    const isBundleJob = false;
+    const shouldRegenerateConcerns = req.body.shouldRegenerateConcerns === true;
+    const generationJob = await createJob(req.body.reports, req.headers, isBundleJob, shouldRegenerateConcerns);
     res.status(200);
     res.send(JSON.stringify(generationJob));
     jobManager.run();
