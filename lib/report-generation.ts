@@ -365,8 +365,8 @@ function sanitizeReportParts(reportParts: ReportParts): ReportParts {
   }
   const options = sanitizeHtml.defaults;
   options.allowedTags = sanitizeHtml.defaults.allowedTags.concat(additionalAllowedTags);
-  options.allowedAttributes = { 
-    ...sanitizeHtml.defaults.allowedAttributes, 
+  options.allowedAttributes = {
+    ...sanitizeHtml.defaults.allowedAttributes,
     ...additionalAllowedAttributes,
   };
   options.allowedStyles = {
@@ -442,6 +442,11 @@ export async function generateReport(
   const oldFile = await retrieveOldFile(reportId, viaJob);
   const sanitizedParts = sanitizeReportParts(reportParts);
   const reportHtml = generateReportHtml(sanitizedParts, reportContext, secretary);
+
+  if (config.ENABLE_DEBUG_WRITE_GENERATED_HTML) {
+    fs.writeFileSync("/debug/rendered_report.html", reportHtml);
+  }
+
   // Fix for list markers not being rendered correctly (regarding spacing) in the pdf
   const fixedReportHtml = reportHtml.replace(/data-list-marker="([^"]*) "/g, 'data-list-marker="$1&nbsp;"');
   const pdfBuffer = await renderHtml(fixedReportHtml);
