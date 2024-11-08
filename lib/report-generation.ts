@@ -8,13 +8,14 @@ import {
 } from "mu";
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { createFile, PhysicalFile, VirtualFile, FileMeta } from "./file";
-import { generateReportHtml } from "./render-report";
+import { generateConcernsPart, generateReportHtml } from "./render-report";
 import config from "../config";
 import constants from "../constants";
 import sanitizeHtml from "sanitize-html";
 import * as fs from "fs";
 import fetch from "node-fetch";
 import { retrieveSignFlowStatus } from "./sign-flow";
+import { getAgendaitemDataFromReport, getAgendaitemPiecesForReport, getRatificationName, updateAgendaitemConcerns } from "./agendaitem";
 
 export interface ReportParts {
   annotation: string | null;
@@ -356,8 +357,8 @@ function sanitizeReportParts(reportParts: ReportParts): ReportParts {
   const additionalAllowedAttributes = {'ol': ['data-list-style']};
   const options = sanitizeHtml.defaults;
   options.allowedTags = sanitizeHtml.defaults.allowedTags.concat(additionalAllowedTags);
-  options.allowedAttributes = { 
-    ...sanitizeHtml.defaults.allowedAttributes, 
+  options.allowedAttributes = {
+    ...sanitizeHtml.defaults.allowedAttributes,
     ...additionalAllowedAttributes
   };
   return {
@@ -410,21 +411,49 @@ async function attachToReport(
 export async function generateReport(
   reportId: string,
   requestHeaders,
+  shouldRegenerateConcerns: boolean = false,
   viaJob: boolean = false,
 ) {
   const reportParts = await retrieveReportParts(reportId, viaJob);
   const reportContext = await retrieveContext(reportId, viaJob);
-  const secretary = await retrieveReportSecretary(reportId, viaJob);
-  const signFlowStatus = await retrieveSignFlowStatus(reportId, viaJob);
   if (!reportParts || !reportContext) {
     throw new Error("No report parts found.");
   }
   if (!reportContext.meeting) {
     throw new Error("No meeting found for this report.");
   }
+
+  const signFlowStatus = await retrieveSignFlowStatus(reportId, viaJob);
   if (signFlowStatus && signFlowStatus !== config.signFlows.statuses.marked) {
     throw new Error("Cannot edit reports that have signatures.")
   }
+
+  // Regenerate concerns part
+  if (shouldRegenerateConcerns) {
+    const agendaitem = await getAgendaitemDataFromReport(reportId);
+    if (agendaitem) {
+      const { shortTitle, title, isApproval, subcaseName, agendaitemId } = agendaitem;
+      const pieces = await getAgendaitemPiecesForReport(agendaitemId, isApproval);
+      const ratification = await getRatificationName(agendaitemId);
+      const documentNames = pieces.map((piece: any) => piece.name);
+      if (ratification) {
+        documentNames.unshift(ratification);
+      }
+      const concerns = generateConcernsPart(
+        shortTitle,
+        title,
+        isApproval,
+        documentNames,
+        subcaseName
+      );
+
+      await updateAgendaitemConcerns(agendaitemId, concerns);
+
+      reportParts.concerns = concerns;
+    }
+  }
+
+  const secretary = await retrieveReportSecretary(reportId, viaJob);
 
   const oldFile = await retrieveOldFile(reportId, viaJob);
   const sanitizedParts = sanitizeReportParts(reportParts);
