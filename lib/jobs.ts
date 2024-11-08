@@ -45,7 +45,7 @@ export class JobManager {
   }
 }
 
-export async function createJob(reportUris: [string] | [],  requestHeaders, isBundleJob = false) {
+export async function createJob(reportUris: [string] | [],  requestHeaders, isBundleJob = false, shouldRegenerateConcerns = false) {
   const jobUuid = uuid();
   const jobUri = `http://data.kaleidos.vlaanderen.be/report-generation-jobs/${jobUuid}`;
   jobRequestHeaders[jobUuid] = requestHeaders; // TODO: find a better way
@@ -65,6 +65,7 @@ export async function createJob(reportUris: [string] | [],  requestHeaders, isBu
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
   PREFIX adms: <http://www.w3.org/ns/adms#>
+  PREFIX tl: <http://mu.semte.ch/vocabularies/typed-literals/>
 
   INSERT DATA {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
@@ -73,7 +74,8 @@ export async function createJob(reportUris: [string] | [],  requestHeaders, isBu
                prov:used ${reportsObject} ;
                adms:status ${sparqlEscapeUri(config.job.statuses.scheduled)} ;
                dct:created ${sparqlEscapeDateTime(now)} ;
-               dct:modified ${sparqlEscapeDateTime(now)} .
+               dct:modified ${sparqlEscapeDateTime(now)} ;
+               ext:shouldRegenerateConcerns ${shouldRegenerateConcerns ? '"true"^^tl:boolean' : '"false"^^tl:boolean'} .
     }
   }`);
 
@@ -122,7 +124,7 @@ async function getNextScheduledJob() {
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
-  SELECT ?uri ?id ?status ?isBundleJob
+  SELECT ?uri ?id ?status ?isBundleJob ?shouldRegenerateConcerns
   WHERE {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       VALUES ?status {
@@ -132,6 +134,7 @@ async function getNextScheduledJob() {
            mu:uuid ?id ;
            dct:created ?created ;
            adms:status ?status .
+      OPTIONAL { ?uri ext:shouldRegenerateConcerns ?shouldRegenerateConcerns . }
       OPTIONAL { ?uri a ext:ReportBundleGenerationJob BIND(true AS ?hasBundleClass) }
       BIND(BOUND(?hasBundleClass) AS ?isBundleJob)
       FILTER NOT EXISTS {
@@ -148,6 +151,7 @@ async function getNextScheduledJob() {
       uri: bindings[0]['uri'].value,
       status: bindings[0]['status'].value,
       isBundleJob: bindings[0]['isBundleJob'].value === '1',
+      shouldRegenerateConcerns: bindings[0]['shouldRegenerateConcerns'].value === 'true',
     };
     job['reportIds'] = await getReportIds(job);
     return job;
@@ -217,11 +221,12 @@ async function executeJob(job) {
   try {
     await updateJobStatus(job.uri, config.job.statuses.ongoing);
 
+    const viaJob = true;
     if (job.isBundleJob) {
-      await generateReportBundle(job.reportIds, jobRequestHeaders[job.id], true);
+      await generateReportBundle(job.reportIds, jobRequestHeaders[job.id], viaJob);
     } else {
       for (const reportId of job.reportIds) {
-        await generateReport(reportId, jobRequestHeaders[job.id], true);
+        await generateReport(reportId, jobRequestHeaders[job.id], job.shouldRegenerateConcerns, viaJob);
       }
     }
 
@@ -247,7 +252,7 @@ export async function cleanupOngoingJobs() {
   DELETE {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       ?uri adms:status ${sparqlEscapeUri(config.job.statuses.ongoing)} .
-    } } 
+    } }
   INSERT {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       ?uri adms:status ${sparqlEscapeUri(config.job.statuses.failure)} .
