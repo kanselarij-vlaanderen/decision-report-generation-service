@@ -59,12 +59,14 @@ export function generateConcernsPart(
   agendaitemTitle: string | null,
   agendaitemIsApproval: boolean,
   documents: string[],
-  subcaseName: string | null
+  subcaseName: string | null,
+  agendaitemType: string
 ): string {
+  const isNota = agendaitemType === constants.AGENDA_ITEM_TYPES.NOTA;
   let betreft = "";
   betreft += `${agendaitemShortTitle}`;
   betreft += agendaitemTitle ? `<br/>${agendaitemTitle}` : "";
-  betreft += subcaseName ? `<br/>${capitalizeFirstLetter(subcaseName)}` : "";
+  betreft += (isNota && subcaseName) ? `<br/>${capitalizeFirstLetter(subcaseName)}` : "";
   betreft +=
     documents && documents.length
       ? `<br/>${formatDocuments(documents, agendaitemIsApproval)}`
