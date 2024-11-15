@@ -432,19 +432,20 @@ export async function generateReport(
   if (shouldRegenerateConcerns) {
     const agendaitem = await getAgendaitemDataFromReport(reportId);
     if (agendaitem) {
-      const { shortTitle, title, isApproval, subcaseName, agendaitemId } = agendaitem;
+      const { shortTitle, title, isApproval, subcaseName, agendaitemId, agendaitemType } = agendaitem;
       const pieces = await getAgendaitemPiecesForReport(agendaitemId, isApproval);
       const ratification = await getRatificationName(agendaitemId);
-      const documentNames = pieces.map((piece: any) => piece.name);
+      let documentNames = pieces.map((piece: any) => piece.name);
       if (ratification) {
-        documentNames.unshift(ratification);
+        documentNames = [...documentNames, ratification];
       }
       const concerns = generateConcernsPart(
         shortTitle,
         title,
         isApproval,
         documentNames,
-        subcaseName
+        subcaseName,
+        agendaitemType,
       );
 
       await updateAgendaitemConcerns(agendaitemId, concerns);
