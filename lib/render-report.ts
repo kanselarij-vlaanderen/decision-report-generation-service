@@ -72,7 +72,9 @@ export function generateConcernsPart(
       ? `<br/>${formatDocuments(documents, agendaitemIsApproval)}`
       : "";
 
-  return betreft;
+  // wrap with div and p to match watch rdfa editor would have done.
+  // pdf looks different without the wrapping, no break after this section
+  return `<div><p>${betreft}</p></div>`;
 }
 
 function formatDocuments(documents: string[], isApproval: boolean) {
