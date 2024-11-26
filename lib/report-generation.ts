@@ -354,12 +354,25 @@ export async function retrieveContext(
 function sanitizeReportParts(reportParts: ReportParts): ReportParts {
   const { concerns, decision, annotation } = reportParts;
   const additionalAllowedTags = ['del'];
-  const additionalAllowedAttributes = {'ol': ['data-list-style']};
+  const additionalAllowedAttributes = {
+    '*': ['data-indentation-level'],
+    'ol': ['style', 'data-hierarchical', 'data-list-style'],
+    'li': ['data-list-marker'],
+  };
+  const additionalAllowedStyles = {
+    'ol': {
+      'list-style-type': [/.*/]
+    }
+  }
   const options = sanitizeHtml.defaults;
   options.allowedTags = sanitizeHtml.defaults.allowedTags.concat(additionalAllowedTags);
   options.allowedAttributes = {
     ...sanitizeHtml.defaults.allowedAttributes,
-    ...additionalAllowedAttributes
+    ...additionalAllowedAttributes,
+  };
+  options.allowedStyles = {
+    ...sanitizeHtml.defaults.allowedStyles,
+    ...additionalAllowedStyles,
   };
   return {
     annotation: annotation ? sanitizeHtml(annotation, sanitizeHtml.defaults) : null,
@@ -459,7 +472,14 @@ export async function generateReport(
   const oldFile = await retrieveOldFile(reportId, viaJob);
   const sanitizedParts = sanitizeReportParts(reportParts);
   const reportHtml = generateReportHtml(sanitizedParts, reportContext, secretary);
-  const pdfBuffer = await renderHtml(reportHtml);
+
+  if (config.ENABLE_DEBUG_WRITE_GENERATED_HTML) {
+    fs.writeFileSync("/debug/rendered_report.html", reportHtml);
+  }
+
+  // Fix for list markers not being rendered correctly (regarding spacing) in the pdf
+  const fixedReportHtml = reportHtml.replace(/data-list-marker="([^"]*) "/g, 'data-list-marker="$1&nbsp;"');
+  const pdfBuffer = await renderHtml(fixedReportHtml);
   const fileMeta = await storePdf(
     generateReportFileName(reportContext),
     pdfBuffer,
