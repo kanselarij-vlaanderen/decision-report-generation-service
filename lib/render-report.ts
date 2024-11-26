@@ -5,8 +5,10 @@ import {
   Secretary,
 } from "./report-generation";
 import constants from "../constants";
-import { addLeadingZeros, formatDate } from "./utils";
+import { addLeadingZeros, capitalizeFirstLetter, formatDate } from "./utils";
 import * as fs from "fs";
+import VRNotulenName from "./vr-notulen-name";
+import VRDocumentName from "./vr-document-name";
 
 function createStyleHeader() {
   const styles = fs.readFileSync("/app/style/report-style.css").toString();
@@ -52,6 +54,73 @@ function meetingKindTitle(meeting: Meeting) {
   return meetingKindTitle;
 }
 
+export function generateConcernsPart(
+  agendaitemShortTitle: string,
+  agendaitemTitle: string | null,
+  agendaitemIsApproval: boolean,
+  documents: string[],
+  subcaseName: string | null,
+  agendaitemType: string
+): string {
+  const isNota = agendaitemType === constants.AGENDA_ITEM_TYPES.NOTA;
+  let betreft = "";
+  betreft += `${agendaitemShortTitle}`;
+  betreft += agendaitemTitle ? `<br/>${agendaitemTitle}` : "";
+  betreft += (isNota && subcaseName) ? `<br/>${capitalizeFirstLetter(subcaseName)}` : "";
+  betreft +=
+    documents && documents.length
+      ? `<br/>${formatDocuments(documents, agendaitemIsApproval)}`
+      : "";
+
+  // wrap with div and p to match watch rdfa editor would have done.
+  // pdf looks different without the wrapping, no break after this section
+  return `<div><p>${betreft}</p></div>`;
+}
+
+function formatDocuments(documents: string[], isApproval: boolean) {
+  const simplifiedNames: any[] = [];
+  let previousVrModel: VRDocumentName | null = null;
+  for (const pieceName of documents) {
+    if (isApproval) {
+      try {
+        simplifiedNames.push(new VRNotulenName(pieceName).vrNumberWithSuffix());
+      } catch {
+        simplifiedNames.push(pieceName);
+      }
+      continue;
+    }
+    try {
+      const vrModel = new VRDocumentName(pieceName);
+      const vrDateOnly = vrModel.vrDateOnly();
+      // if the date part of the previous VR number is the same we don't repeat it
+      const previousVrDate = previousVrModel?.vrDateOnly();
+      if (previousVrDate === vrDateOnly) {
+        simplifiedNames.push(vrModel.withoutDate());
+      } else {
+        simplifiedNames.push(vrModel.vrNumberWithSuffix());
+      }
+      previousVrModel = vrModel;
+    } catch {
+      simplifiedNames.push(pieceName);
+      previousVrModel = null;
+      continue;
+    }
+  }
+  return `(${formatListNl(simplifiedNames)})`;
+}
+
+function formatListNl(items: string[]): string {
+  if (items.length === 0) {
+    return '';
+  } else if (items.length === 1) {
+    return items[0];
+  } else {
+    return `${items.slice(0, -1).join(", ")} en ${
+      items[items.length - 1]
+    }`;
+  }
+}
+
 function generateReportContent(
   reportParts: ReportParts,
   reportContext: ReportContext,
@@ -67,7 +136,7 @@ function generateReportContent(
     <br />`;
   }
   let confidentialHtml = "";
-  if (reportContext.accessLevel === constants.ACCESS_LEVEL.CONFIDENTIAL) {
+  if (reportContext.accessLevel === constants.ACCESS_LEVELS.VERTROUWELIJK) {
     confidentialHtml = '<p class="confidential-statement">VERTROUWELIJK</p>';
   }
   let reportHtml = `
