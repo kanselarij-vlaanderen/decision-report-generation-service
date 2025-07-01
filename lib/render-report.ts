@@ -5,7 +5,7 @@ import {
   Secretary,
 } from "./report-generation";
 import constants from "../constants";
-import { addLeadingZeros, capitalizeFirstLetter, formatDate } from "./utils";
+import { capitalizeFirstLetter, formatDate } from "./utils";
 import * as fs from "fs";
 import VRNotulenName from "./vr-notulen-name";
 import VRDocumentName from "./vr-document-name";
@@ -126,9 +126,7 @@ function generateReportContent(
   reportContext: ReportContext,
   secretary: Secretary | null
 ) {
-  const { meeting, agendaItem } = reportContext;
-  const { number: agendaItemNumber, isAnnouncement } = agendaItem;
-  const { numberRepresentation } = meeting;
+  const { meeting, currentReportName } = reportContext;
   let annotationHtml = `<br />
   <br />`;
   if (reportParts.annotation) {
@@ -247,8 +245,7 @@ function generateReportContent(
       <p
         style="font-weight: 500; text-decoration: underline; font-size: 12pt;"
       >
-        ${numberRepresentation} - ${isAnnouncement ? "mededeling" : "punt"}
-        ${addLeadingZeros(agendaItemNumber, 4)}
+        ${currentReportName}
       </p>
       <br />
 
