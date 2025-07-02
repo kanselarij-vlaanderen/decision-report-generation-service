@@ -74,7 +74,7 @@ export function generateConcernsPart(
 
   // wrap with div and p to match watch rdfa editor would have done.
   // pdf looks different without the wrapping, no break after this section
-  return `<div><p>${betreft}</p></div>`;
+  return `<div><p>${betreft.replace(/\n/g, '<br />')}</p></div>`;
 }
 
 function formatDocuments(documents: string[], isApproval: boolean) {
