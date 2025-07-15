@@ -10,7 +10,6 @@ import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { createFile, PhysicalFile, VirtualFile, FileMeta } from "./file";
 import { generateConcernsPart, generateReportHtml } from "./render-report";
 import config from "../config";
-import constants from "../constants";
 import sanitizeHtml from "sanitize-html";
 import * as fs from "fs";
 import fetch from "node-fetch";
@@ -40,7 +39,6 @@ export type ReportContext = {
 
 export type AgendaItem = {
   number: number;
-  isAnnouncement: boolean;
 };
 
 export type File = {
@@ -343,8 +341,6 @@ export async function retrieveContext(
     },
     agendaItem: {
       number: agendaItemNumber.value,
-      isAnnouncement:
-        agendaItemType.value === constants.AGENDA_ITEM_TYPES.ANNOUNCEMENT,
     },
     accessLevel: accessLevel?.value,
     currentReportName: currentReportName?.value,

@@ -33,10 +33,6 @@ export function formatDate(date: Date) {
   return `${weekdayName(date)} ${date.getDate()} ${monthName(date)} ${date.getFullYear()}`
 }
 
-export function addLeadingZeros(number: number, length: number): string {
-  return String(number).padStart(length, "0");
-}
-
 export function capitalizeFirstLetter(string: string): string {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
