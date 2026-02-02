@@ -10,6 +10,7 @@ import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import fs from 'fs';
 import { PDFDocument } from "pdf-lib";
 import config from "../config";
+import constants from "../constants";
 import { deleteFile, retrieveContext, storePdf, File } from "./report-generation";
 import { FileMeta, } from "./file";
 
@@ -35,7 +36,7 @@ export async function getReportsForMeeting(
       ?agenda dct:hasPart ?agendaitem .
       ?decisionActivity ^besluitvorming:heeftBeslissing/dct:subject ?agendaitem .
       ?report besluitvorming:beschrijft ?decisionActivity .
-      ?report besluitvorming:vertrouwelijkheidsniveau ${sparqlEscapeUri(config.INTERN_OVERHEID)} .
+      ?report besluitvorming:vertrouwelijkheidsniveau ${sparqlEscapeUri(constants.ACCESS_LEVELS.INTERN_OVERHEID)} .
   
       FILTER NOT EXISTS { ?nextAgenda prov:wasRevisionOf ?agenda }
     }
@@ -154,7 +155,7 @@ async function attachToMeeting(
 
   const now = new Date();
 
-  const accessLevel = config.INTERN_OVERHEID
+  const accessLevel = constants.ACCESS_LEVELS.INTERN_OVERHEID;
 
   const insertPieceQueryString = `
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
@@ -177,7 +178,7 @@ async function attachToMeeting(
       ${sparqlEscapeUri(documentContainerUri)} a dossier:Serie ;
         mu:uuid ${sparqlEscapeString(documentContainerUuid)} ;
         dct:created ${sparqlEscapeDateTime(now)} ;
-        dct:type ${sparqlEscapeUri(config.BESLISSINGSFICHE_TYPE)} ;
+        dct:type ${sparqlEscapeUri(constants.DOCUMENT_TYPES.BESLISSINGSFICHE)} ;
         dossier:Collectie.bestaatUit ${sparqlEscapeUri(pieceUri)} .
     }
   }
