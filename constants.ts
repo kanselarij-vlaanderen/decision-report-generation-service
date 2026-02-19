@@ -14,6 +14,7 @@ export default {
   ACCESS_LEVELS: {
     INTERN_SECRETARIE: 'http://themis.vlaanderen.be/id/concept/toegangsniveau/66804c35-4652-4ff4-b927-16982a3b6de8',
     VERTROUWELIJK: 'http://themis.vlaanderen.be/id/concept/toegangsniveau/9692ba4f-f59b-422b-9402-fcbd30a46d17',
+    INGETROKKEN: 'http://themis.vlaanderen.be/id/concept/toegangsniveau/969a712a-b3d3-406f-ab08-5f665427185a',
     INTERN_REGERING: 'http://themis.vlaanderen.be/id/concept/toegangsniveau/13ae94b0-6188-49df-8ecd-4c4a17511d6d',
     INTERN_OVERHEID: 'http://themis.vlaanderen.be/id/concept/toegangsniveau/634f438e-0d62-4ae4-923a-b63460f6bc46',
     PUBLIEK: 'http://themis.vlaanderen.be/id/concept/toegangsniveau/c3de9c70-391e-4031-a85e-4b03433d6266',
@@ -21,7 +22,6 @@ export default {
   DOCUMENT_TYPES: {
     NOTA: 'http://themis.vlaanderen.be/id/concept/document-type/f2b0f655-8ed7-4f61-8f2b-ca813de7a6ed',
     VISIENOTA: 'http://themis.vlaanderen.be/id/concept/document-type/8ae796bd-690a-4ed6-855c-c4572e883066',
-    DECISION: 'http://themis.vlaanderen.be/id/concept/document-type/e807feec-1958-46cf-a558-3379b5add49e',
     MB: 'https://data.vlaanderen.be/id/concept/AardWetgeving/MinisterieelBesluit',
     DECREET: 'https://data.vlaanderen.be/id/concept/AardWetgeving/Decreet',
     BVR: 'https://data.vlaanderen.be/id/concept/AardWetgeving/BesluitVanDeVlaamseRegering',
