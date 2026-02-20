@@ -23,7 +23,7 @@ new CronJob(
 );
 
 /* Generate a single report */
-app.post("/:id", async function (req, res, next) {
+app.post("/:id/generate", async function (req, res, next) {
   try {
     const shouldRegenerateConcerns = req.body.shouldRegenerateConcerns === true;
     const fileMeta = await generateReport(req.params.id, req.headers, shouldRegenerateConcerns);
