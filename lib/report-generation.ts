@@ -15,6 +15,7 @@ import * as fs from "fs";
 import fetch from "node-fetch";
 import { retrieveSignFlowStatus } from "./sign-flow";
 import { getAgendaitemDataFromReport, getAgendaitemPiecesForReport, getRatificationName, updateAgendaitemConcerns } from "./agendaitem";
+import CONSTANTS from "../constants";
 
 export interface ReportParts {
   annotation: string | null;
@@ -441,8 +442,9 @@ export async function generateReport(
   if (shouldRegenerateConcerns) {
     const agendaitem = await getAgendaitemDataFromReport(reportId);
     if (agendaitem) {
-      const { shortTitle, title, isApproval, subcaseName, agendaitemId, agendaitemType } = agendaitem;
-      const pieces = await getAgendaitemPiecesForReport(agendaitemId, isApproval);
+      const { shortTitle, title, isApproval, subcaseName, agendaitemId, agendaitemType, decisionResultCode } = agendaitem;
+      const isRetracted = (decisionResultCode === CONSTANTS.DECISION_RESULT_CODE_URIS.INGETROKKEN);
+      const pieces = await getAgendaitemPiecesForReport(agendaitemId, isApproval, isRetracted);
       const ratification = await getRatificationName(agendaitemId);
       let documentNames = pieces.map((piece: any) => piece.name);
       if (ratification) {
