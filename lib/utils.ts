@@ -46,6 +46,7 @@ export function invert(dictionary) {
 
 const prefixes = {
   adms: "http://www.w3.org/ns/adms#",
+  besluit: "<http://data.vlaanderen.be/ns/besluit#>",
   besluitvorming: "https://data.vlaanderen.be/ns/besluitvorming#",
   dbpedia: "http://dbpedia.org/ontology/",
   dct: "http://purl.org/dc/terms/",
