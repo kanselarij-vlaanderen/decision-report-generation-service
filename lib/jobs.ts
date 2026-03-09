@@ -83,8 +83,7 @@ export async function createJob(reportUris: [string] | [],  requestHeaders: any,
     id: jobUuid,
     uri: jobUri,
     status: JOB.STATUSES.SCHEDULED,
-    created: now,
-    modified: now
+    created: now
   };
 }
 
@@ -136,10 +135,10 @@ async function getNextScheduledJob() {
            dct:created ?created ;
            adms:status ?status .
       OPTIONAL { ?uri ext:shouldRegenerateConcerns ?shouldRegenerateConcerns . }
-      OPTIONAL { ?uri a ext:ReportBundleGenerationJob BIND(true AS ?hasBundleClass) }
+      OPTIONAL { ?uri a ${sparqlEscapeUri(JOB.BUNDLE_RDF_TYPE)} BIND(true AS ?hasBundleClass) }
       BIND(BOUND(?hasBundleClass) AS ?isBundleJob)
       FILTER NOT EXISTS {
-        ?job a ${sparqlEscapeUri(JOB.RDF_TYPE)} ;
+        ?anyBusyJob a ${sparqlEscapeUri(JOB.RDF_TYPE)} ;
            adms:status ${sparqlEscapeUri(JOB.STATUSES.BUSY)} .
       }
     }
@@ -168,14 +167,16 @@ export async function getJob(jobId) {
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
+  PREFIX prov: <http://www.w3.org/ns/prov#>
 
-  SELECT ?uri ?status ?created ?modified
+  SELECT ?uri ?status ?created ?timeStarted ?timeEnded
   WHERE {
     GRAPH ${sparqlEscapeUri(JOB.GRAPH)} {
       ?uri a ${sparqlEscapeUri(JOB.RDF_TYPE)} ;
            mu:uuid ${sparqlEscapeString(jobId)} ;
            dct:created ?created .
-      OPTIONAL { ?uri dct:modified ?modified . }
+      OPTIONAL { ?uri prov:startedAtTime ?timeStarted . }
+      OPTIONAL { ?uri prov:endedAtTime ?timeEnded . }
       OPTIONAL { ?uri adms:status ?status . }
     }
   } ORDER BY ASC(?created) LIMIT 1`);
@@ -187,7 +188,8 @@ export async function getJob(jobId) {
       uri: bindings[0]['uri']?.value,
       status: bindings[0]['status']?.value,
       created: bindings[0]['created']?.value,
-      modified: bindings[0]['modified']?.value,
+      timeStarted: bindings[0]['timeStarted']?.value,
+      timeEnded: bindings[0]['timeEnded']?.value,
     };
     job['reportIds'] = await getReportIds(job);
     return job;
@@ -225,21 +227,26 @@ async function executeJob(job) {
 }
 
 export async function cleanupOngoingJobs() {
+  const now = new Date();
   await updateSudo(`
   PREFIX adms: <http://www.w3.org/ns/adms#>
+  PREFIX prov: <http://www.w3.org/ns/prov#>
 
   DELETE {
     GRAPH ${sparqlEscapeUri(JOB.GRAPH)} {
       ?uri adms:status ${sparqlEscapeUri(JOB.STATUSES.BUSY)} .
+      ?uri prov:endedAtTime ?endTime .
     } }
   INSERT {
     GRAPH ${sparqlEscapeUri(JOB.GRAPH)} {
       ?uri adms:status ${sparqlEscapeUri(JOB.STATUSES.FAILED)} .
+      ?uri prov:endedAtTime ${sparqlEscapeDateTime(now)}
     } }
   WHERE {
     GRAPH ${sparqlEscapeUri(JOB.GRAPH)} {
       ?uri a ${sparqlEscapeUri(JOB.RDF_TYPE)} ;
            adms:status ${sparqlEscapeUri(JOB.STATUSES.BUSY)} .
+      OPTIONAL { ?uri prov:endedAtTime ?endTime }
     }}`);
 }
 
