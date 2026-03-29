@@ -42,4 +42,7 @@ export default {
     KENNISNAME: 'http://themis.vlaanderen.be/id/concept/beslissing-resultaatcodes/9f342a88-9485-4a83-87d9-245ed4b504bf',
     INGETROKKEN: 'http://themis.vlaanderen.be/id/concept/beslissing-resultaatcodes/453a36e8-6fbd-45d3-b800-ec96e59f273b',
   },
+  SIGN_FLOW_STATUSES: {
+    MARKED: 'http://themis.vlaanderen.be/id/handtekenstatus/f6a60072-0537-11ee-bb35-ee395168dcf7',
+  },
 };

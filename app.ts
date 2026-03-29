@@ -3,6 +3,7 @@ import { createJob, getJob, JobManager, cleanupOngoingJobs } from "./lib/jobs";
 import { generateReport } from "./lib/report-generation";
 import { getReportsForMeeting } from "./lib/bundle-generation";
 import { CronJob } from "cron";
+import { REPORT_CRON_PATTERN } from './config';
 
 // on startup
 cleanupOngoingJobs();
@@ -11,9 +12,8 @@ const jobManager = new JobManager();
 jobManager.run();
 
 /** Schedule report generation cron job */
-const cronFrequency = process.env.REPORT_CRON_PATTERN || "0 * * * * *";
 new CronJob(
-  cronFrequency,
+  REPORT_CRON_PATTERN,
   function () {
     console.log(`Jobs triggered by cron job at ${new Date().toISOString()}`);
     jobManager.run();
@@ -27,6 +27,7 @@ app.post("/:id/generate", async function (req, res, next) {
   try {
     const shouldRegenerateConcerns = req.body.shouldRegenerateConcerns === true;
     const fileMeta = await generateReport(req.params.id, req.headers, shouldRegenerateConcerns);
+    // TODO KAS-4883 JSON API compliant?
     res.status(200).send(fileMeta);
   } catch (e) {
     console.error(e);
@@ -47,6 +48,7 @@ app.post("/generate-reports", async function (req, res, next) {
     const shouldRegenerateConcerns = req.body.shouldRegenerateConcerns === true;
     const generationJob = await createJob(req.body.reports, req.headers, isBundleJob, shouldRegenerateConcerns);
     res.status(200);
+    // TODO KAS-4883 JSON API compliant?
     res.send(JSON.stringify(generationJob));
     jobManager.run();
   } catch (e) {
@@ -74,6 +76,7 @@ app.post("/generate-reports-bundle", async function (req, res, next) {
       isBundleJob
     );
     res.status(200);
+    // TODO KAS-4883 JSON API compliant?
     res.send(JSON.stringify(bundleGenerationJob));
     jobManager.run();
   } catch (e) {
@@ -87,6 +90,7 @@ app.get("/job/:id", async function (req, res, next) {
     const job = await getJob(req.params.id);
     if (job) {
       res.status(200);
+      // TODO KAS-4883 JSON API compliant?
       res.send(JSON.stringify(job));
     } else {
       next({ message: "Job not found", status: 404 });

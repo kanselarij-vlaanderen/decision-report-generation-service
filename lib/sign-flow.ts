@@ -4,7 +4,7 @@ import {
   query,
 } from "mu";
 import { querySudo } from '@lblod/mu-auth-sudo';
-import config from "../config";
+import { GRAPHS } from "../config";
 
 async function retrieveSignFlowStatus(
   reportId: string,
@@ -15,11 +15,11 @@ async function retrieveSignFlowStatus(
   PREFIX sign: <http://mu.semte.ch/vocabularies/ext/handtekenen/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
   SELECT DISTINCT ?report ?signFlow ?status WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
     }
     OPTIONAL {
-      GRAPH ${sparqlEscapeUri(config.signFlows.graph)} {
+      GRAPH ${sparqlEscapeUri(GRAPHS.SIGNING)} {
         ?signMarkingActivity sign:gemarkeerdStuk ?report .
         ?signMarkingActivity sign:markeringVindtPlaatsTijdens ?signSubcase .
         ?signFlow sign:doorlooptHandtekening ?signSubcase .

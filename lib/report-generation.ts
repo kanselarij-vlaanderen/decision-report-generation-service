@@ -9,7 +9,12 @@ import {
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { createFile, PhysicalFile, VirtualFile, FileMeta } from "./file";
 import { generateConcernsPart, generateReportHtml } from "./render-report";
-import config from "../config";
+import {
+  ENABLE_DEBUG_WRITE_GENERATED_HTML,
+  GRAPHS,
+  RESOURCE_BASES,
+  STORAGE_PATH,
+} from "../config";
 import sanitizeHtml from "sanitize-html";
 import * as fs from "fs";
 import fetch from "node-fetch";
@@ -60,7 +65,7 @@ function generateReportFileName(reportContext: ReportContext): string {
   return `${reportContext.currentReportName}.pdf`.replace('/', '-');
 }
 
-export async function deleteFile(requestHeaders, file: File) {
+export async function deleteFile(requestHeaders: any, file: File) {
   try {
     const response = await fetch(`http://file/files/${file.id}`, {
       method: "delete",
@@ -89,7 +94,7 @@ async function retrieveOldFile(
   PREFIX nfo: <http://www.semanticdesktop.org/ontologies/2007/03/22/nfo#>
 
   SELECT DISTINCT ?fileId WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       ?report prov:value ?file .
@@ -139,7 +144,7 @@ export async function storePdf(fileName: string, buffer: Buffer | Uint8Array, vi
   const now = new Date();
   const physicalUuid = generateUuid();
   const physicalName = `${physicalUuid}.pdf`
-  const filePath = `${config.STORAGE_PATH}/${physicalName}`;
+  const filePath = `${STORAGE_PATH}/${physicalName}`;
 
   const physicalFile: PhysicalFile = {
     id: physicalUuid,
@@ -154,7 +159,7 @@ export async function storePdf(fileName: string, buffer: Buffer | Uint8Array, vi
   const virtualUuid = generateUuid();
   const file: VirtualFile =   {
     id: virtualUuid,
-    uri: `${config.FILE_RESOURCE_BASE}${virtualUuid}`,
+    uri: `${RESOURCE_BASES.FILE}${virtualUuid}`,
     name: fileName,
     extension: "pdf",
     size: buffer.byteLength,
@@ -180,7 +185,7 @@ async function retrieveReportParts(
   PREFIX pav: <http://purl.org/pav/>
 
   SELECT * WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?s mu:uuid ${sparqlEscapeString(reportId)} .
       ?s a besluitvorming:Verslag .
    	  ?piecePart dct:isPartOf ?s .
@@ -233,14 +238,14 @@ async function retrieveReportSecretary(
     PREFIX persoon: <https://data.vlaanderen.be/ns/persoon#>
 
     SELECT DISTINCT ?lastName ?firstName ?title  WHERE {
-      GRAPH ${sparqlEscapeUri(config.graph.public)}  {
+      GRAPH ${sparqlEscapeUri(GRAPHS.PUBLIC)}  {
         ?mandatee dct:title ?title .
         ?mandatee mandaat:isBestuurlijkeAliasVan ?person .
         ?person foaf:familyName ?lastName .
         ?person persoon:gebruikteVoornaam ?firstName .
         {
           SELECT DISTINCT ?mandatee WHERE {
-            GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+            GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
               ?report mu:uuid ${sparqlEscapeString(reportId)} .
               ?report a besluitvorming:Verslag .
               ?report besluitvorming:beschrijft ?decisionActivity .
@@ -287,7 +292,7 @@ export async function retrieveContext(
   SELECT DISTINCT
   ?numberRepresentation ?geplandeStart ?agendaItemNumber ?meetingId ?meetingType ?mainMeetingType ?agendaItemType ?accessLevel ?currentReportName
   WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       ?report dct:title ?currentReportName .
@@ -392,17 +397,17 @@ async function attachToReport(
   PREFIX prov: <http://www.w3.org/ns/prov#>
 
   DELETE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?report prov:value ?document .
       ?report dct:modified ?modified .
     }
   } INSERT {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?report prov:value ${sparqlEscapeUri(fileMeta.uri)} .
       ?report dct:modified ${sparqlEscapeDateTime(new Date())}
     }
   } WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?report mu:uuid ${sparqlEscapeString(reportId)} .
       ?report a besluitvorming:Verslag .
       OPTIONAL { ?report dct:modified ?modified .}
@@ -420,7 +425,7 @@ async function attachToReport(
 
 export async function generateReport(
   reportId: string,
-  requestHeaders,
+  requestHeaders: any,
   shouldRegenerateConcerns: boolean = false,
   viaJob: boolean = false,
 ) {
@@ -434,13 +439,17 @@ export async function generateReport(
   }
 
   const signFlowStatus = await retrieveSignFlowStatus(reportId, viaJob);
-  if (signFlowStatus && signFlowStatus !== config.signFlows.statuses.marked) {
+  if (signFlowStatus && signFlowStatus !== CONSTANTS.SIGN_FLOW_STATUSES.MARKED) {
     throw new Error("Cannot edit reports that have signatures.")
   }
 
   // Regenerate concerns part
   if (shouldRegenerateConcerns) {
     const agendaitem = await getAgendaitemDataFromReport(reportId);
+    // TODO KAS-4883 agendaitem is empty when isApproval is true since we require a subcase
+    // TODO this means approval decisions never gets a new concerns part (does this matter?)
+    // TODO ALSO the concerns part for approval (if query is changed) is NOT correct, no documents are listed
+    // TODO decide how to move forward with this (leave as-is?)
     if (agendaitem) {
       const { shortTitle, title, isApproval, subcaseName, agendaitemId, agendaitemType, decisionResultCode } = agendaitem;
       const isRetracted = (decisionResultCode === CONSTANTS.DECISION_RESULT_CODE_URIS.INGETROKKEN);
@@ -471,7 +480,7 @@ export async function generateReport(
   const sanitizedParts = sanitizeReportParts(reportParts);
   const reportHtml = generateReportHtml(sanitizedParts, reportContext, secretary);
 
-  if (config.ENABLE_DEBUG_WRITE_GENERATED_HTML) {
+  if (ENABLE_DEBUG_WRITE_GENERATED_HTML) {
     fs.writeFileSync("/debug/rendered_report.html", reportHtml);
   }
 

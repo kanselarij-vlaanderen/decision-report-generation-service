@@ -9,7 +9,7 @@ import {
 import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import fs from 'fs';
 import { PDFDocument } from "pdf-lib";
-import config from "../config";
+import { GRAPHS, RESOURCE_BASES } from "../config";
 import constants from "../constants";
 import { deleteFile, retrieveContext, storePdf, File } from "./report-generation";
 import { FileMeta, } from "./file";
@@ -29,7 +29,7 @@ export async function getReportsForMeeting(
   
   
   SELECT DISTINCT ?report WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
       ?meeting a besluit:Vergaderactiviteit .
       ?agenda besluitvorming:isAgendaVoor ?meeting .
@@ -66,7 +66,7 @@ async function getOldBundleFile(
   PREFIX dct: <http://purl.org/dc/terms/>
 
   SELECT DISTINCT ?fileId WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
       ?meeting a besluit:Vergaderactiviteit .
       ?meeting ext:numberRepresentation ?numberRepresentation .
@@ -108,7 +108,7 @@ PREFIX besluitvorming: <https://data.vlaanderen.be/ns/besluitvorming#>
 SELECT DISTINCT ?report ?physicalFile
 WHERE {
   VALUES ?reportId { ${reportIds.map(sparqlEscapeString).join(' ')} }
-  GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+  GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
     ?report mu:uuid ?reportId .
     ?report prov:value/^nie:dataSource ?originalFile .
     OPTIONAL {
@@ -122,7 +122,7 @@ WHERE {
 
     BIND(IF(BOUND(?flattenedFile), ?flattenedFile , ?originalFile) AS ?physicalFile)
   }
-  GRAPH ${sparqlEscapeUri(config.graph.public)} { ?agendaitemType schema:position ?typeOrder }
+  GRAPH ${sparqlEscapeUri(GRAPHS.PUBLIC)} { ?agendaitemType schema:position ?typeOrder }
 } ORDER BY ?typeOrder STR(?reportName)`;
 
   let result;
@@ -148,10 +148,10 @@ async function attachToMeeting(
   viaJob: boolean
 ) {
   const pieceUuid = uuid();
-  const pieceUri = `${config.PIECE_RESOURCE_BASE}${pieceUuid}`;
+  const pieceUri = `${RESOURCE_BASES.PIECE}${pieceUuid}`;
 
   const documentContainerUuid = uuid();
-  const documentContainerUri = `${config.DOCUMENT_CONTAINER_RESOURCE_BASE}${documentContainerUuid}`;
+  const documentContainerUri = `${RESOURCE_BASES.DOCUMENT_CONTAINER}${documentContainerUuid}`;
 
   const now = new Date();
 
@@ -167,7 +167,7 @@ async function attachToMeeting(
   PREFIX prov: <http://www.w3.org/ns/prov#>
 
   INSERT {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?meeting ext:zittingDocumentversie ${sparqlEscapeUri(pieceUri)} .
       ${sparqlEscapeUri(pieceUri)} a dossier:Stuk ;
         mu:uuid ${sparqlEscapeString(pieceUuid)} ;
@@ -183,7 +183,7 @@ async function attachToMeeting(
     }
   }
   WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
       ?meeting a besluit:Vergaderactiviteit .
       ?meeting ext:numberRepresentation ?numberRepresentation .
@@ -204,17 +204,17 @@ async function attachToMeeting(
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
   DELETE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?piece prov:value ?file .
       ?piece dct:modified ?modified .
     }
   } INSERT {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?piece prov:value ${sparqlEscapeUri(fileMeta.uri)} .
       ?piece dct:modified ${sparqlEscapeDateTime(now)}
     }
   } WHERE {
-    GRAPH ${sparqlEscapeUri(config.graph.kanselarij)} {
+    GRAPH ${sparqlEscapeUri(GRAPHS.KANSELARIJ)} {
       ?meeting mu:uuid ${sparqlEscapeString(meetingId)} .
       ?meeting a besluit:Vergaderactiviteit .
       ?meeting ext:numberRepresentation ?numberRepresentation .
