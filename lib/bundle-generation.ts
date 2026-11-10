@@ -6,7 +6,6 @@ import {
   sparqlEscapeDateTime,
   uuid,
 } from "mu";
-import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import fs from 'fs';
 import { PDFDocument } from "pdf-lib";
 import config from "../config";
@@ -80,7 +79,7 @@ async function getOldBundleFile(
   }`;
   let queryResult;
   if (viaJob) {
-    queryResult = await querySudo(queryString);
+    queryResult = await query(queryString, { sudo: true });
   } else {
     queryResult = await query(queryString);
   }
@@ -127,7 +126,7 @@ WHERE {
 
   let result;
   if (viaJob) {
-    result = await querySudo(queryString);
+    result = await query(queryString, { sudo: true });
   } else {
     result = await query(queryString);
   }
@@ -228,8 +227,8 @@ async function attachToMeeting(
   `;
 
   if (viaJob) {
-    await updateSudo(insertPieceQueryString);
-    await updateSudo(attachFileToPieceQueryString);
+    await update(insertPieceQueryString, { sudo: true });
+    await update(attachFileToPieceQueryString, { sudo: true });
   } else {
     await update(insertPieceQueryString);
     await update(attachFileToPieceQueryString);

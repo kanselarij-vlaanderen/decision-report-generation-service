@@ -36,8 +36,8 @@ declare module "mu" {
     value: string | boolean | number | Date,
     type: string
   ): string;
-  function query(queryString: string): Promise<SparqlClientResponse>;
-  function update(queryString: string): Promise<void>;
+  function query(queryString: string, options: Object): Promise<SparqlClientResponse>;
+  function update(queryString: string, options: Object): Promise<void>;
   function uuid(): string;
   function errorHandler(
     err: Error,
@@ -45,29 +45,4 @@ declare module "mu" {
     res: Response,
     next: () => void
   ): void;
-}
-
-declare module "@lblod/mu-auth-sudo" {
-  import { Application, Request, Response } from "express";
-
-  type SparqlClientResponse = {
-    head: { link: unknown[]; vars: string[] };
-    results: {
-      distinct: boolean;
-      ordered: boolean;
-      bindings: Record<
-        string,
-        {
-          type: "literal";
-          "xml:lang"?: string;
-          value: SparqlClientValue;
-        }
-      >[];
-    };
-  } | null;
-
-  type SparqlClientValue = string | number | Date | undefined;
-
-  function querySudo(queryString: string): Promise<SparqlClientResponse>;
-  function updateSudo(queryString: string): Promise<void>;
 }

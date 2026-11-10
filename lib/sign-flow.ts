@@ -3,7 +3,6 @@ import {
   sparqlEscapeString,
   query,
 } from "mu";
-import { querySudo } from '@lblod/mu-auth-sudo';
 import config from "../config";
 
 async function retrieveSignFlowStatus(
@@ -29,7 +28,7 @@ async function retrieveSignFlowStatus(
   }`;
   let queryResult;
   if (viaJob) {
-    queryResult = await querySudo(dataQuery);
+    queryResult = await query(dataQuery, { sudo: true });
   } else {
     queryResult = await query(dataQuery);
   }

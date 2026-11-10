@@ -1,5 +1,4 @@
-import { update } from 'mu';
-import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
+import { update, query } from 'mu';
 import { sparqlEscapeString, sparqlEscapeUri, sparqlEscapeDateTime, uuid } from 'mu';
 import config from '../config';
 import { generateReport } from "./report-generation";
@@ -89,7 +88,7 @@ export async function createJob(reportUris: [string] | [],  requestHeaders, isBu
 }
 
 async function getReportIds(job) {
-  const result = await querySudo(`
+  const result = await query(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX prov: <http://www.w3.org/ns/prov#>
   PREFIX dct: <http://purl.org/dc/terms/>
@@ -108,7 +107,7 @@ async function getReportIds(job) {
       ?agendaitem dct:type ?agendaitemType .
     }
     GRAPH ${sparqlEscapeUri(config.graph.public)} { ?agendaitemType schema:position ?typeOrder }
-  } ORDER BY ?typeOrder ?reportName`);
+  } ORDER BY ?typeOrder ?reportName`, { sudo: true });
   const bindings = result.results.bindings;
   if (bindings.length > 0) {
     return bindings.map((binding) => binding['reportId'].value);
@@ -118,7 +117,7 @@ async function getReportIds(job) {
 }
 
 async function getNextScheduledJob() {
-  const result = await querySudo(`
+  const result = await query(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
@@ -142,7 +141,7 @@ async function getNextScheduledJob() {
            adms:status ${sparqlEscapeUri(config.job.statuses.ongoing)} .
       }
     }
-  } ORDER BY ASC(?created) LIMIT 1`);
+  } ORDER BY ASC(?created) LIMIT 1`, { sudo: true });
 
   const bindings = result.results.bindings;
   if (bindings.length === 1) {
@@ -162,7 +161,7 @@ async function getNextScheduledJob() {
 
 export async function getJob(jobId) {
   // there may be a split second where the job is not found when the status/modified is being updated
-  const result = await querySudo(`
+  const result = await query(`
   PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
   PREFIX dct: <http://purl.org/dc/terms/>
@@ -177,7 +176,7 @@ export async function getJob(jobId) {
       OPTIONAL { ?uri dct:modified ?modified . }
       OPTIONAL { ?uri adms:status ?status . }
     }
-  } ORDER BY ASC(?created) LIMIT 1`);
+  } ORDER BY ASC(?created) LIMIT 1`, { sudo: true });
 
   const bindings = result.results.bindings;
   if (bindings.length === 1) {
@@ -196,7 +195,7 @@ export async function getJob(jobId) {
 }
 
 async function updateJobStatus(uri, status) {
-  await updateSudo(`
+  await update(`
   PREFIX dct: <http://purl.org/dc/terms/>
   PREFIX adms: <http://www.w3.org/ns/adms#>
 
@@ -214,7 +213,7 @@ async function updateJobStatus(uri, status) {
         ${sparqlEscapeUri(uri)} dct:modified ${sparqlEscapeDateTime(new Date())};
              adms:status ${sparqlEscapeUri(status)}.
     }
-  }`);
+  }`, { sudo: true });
 }
 
 async function executeJob(job) {
@@ -245,7 +244,7 @@ async function executeJob(job) {
 }
 
 export async function cleanupOngoingJobs() {
-  await updateSudo(`
+  await update(`
   PREFIX adms: <http://www.w3.org/ns/adms#>
   PREFIX ext: <http://mu.semte.ch/vocabularies/ext/>
 
@@ -261,5 +260,5 @@ export async function cleanupOngoingJobs() {
     GRAPH ${sparqlEscapeUri(config.job.graph)} {
       ?uri a ext:ReportGenerationJob ;
            adms:status ${sparqlEscapeUri(config.job.statuses.ongoing)} .
-    }}`);
+    }}`, { sudo: true });
 }

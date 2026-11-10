@@ -6,7 +6,6 @@ import {
   sparqlEscapeDateTime,
   uuid as generateUuid,
 } from "mu";
-import { querySudo, updateSudo } from '@lblod/mu-auth-sudo';
 import { createFile, PhysicalFile, VirtualFile, FileMeta } from "./file";
 import { generateConcernsPart, generateReportHtml } from "./render-report";
 import config from "../config";
@@ -100,7 +99,7 @@ async function retrieveOldFile(
 
   let queryResult;
   if (viaJob) {
-    queryResult = await querySudo(queryString);
+    queryResult = await query(queryString, { sudo: true });
   } else {
     queryResult = await query(queryString);
   }
@@ -192,7 +191,7 @@ async function retrieveReportParts(
   `;
   let queryResult;
   if (viaJob) {
-    queryResult = await querySudo(reportQuery);
+    queryResult = await query(reportQuery, { sudo: true });
   } else {
     queryResult = await query(reportQuery);
   }
@@ -253,7 +252,7 @@ async function retrieveReportSecretary(
     `;
   let queryResult;
   if (viaJob) {
-    queryResult = await querySudo(dataQuery);
+    queryResult = await query(dataQuery, { sudo: true });
   } else {
     queryResult = await query(dataQuery);
   }
@@ -310,7 +309,7 @@ export async function retrieveContext(
   `;
   let queryResult;
   if (viaJob) {
-    queryResult = await querySudo(dataQuery);
+    queryResult = await query(dataQuery, { sudo: true });
   } else {
     queryResult = await query(dataQuery);
   }
@@ -412,7 +411,7 @@ async function attachToReport(
   `;
 
   if (viaJob) {
-    await updateSudo(queryString);
+    await update(queryString, { sudo: true });
   } else {
     await update(queryString);
   }

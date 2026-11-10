@@ -5,7 +5,6 @@ import {
   sparqlEscapeDateTime,
   update,
 } from "mu";
-import { updateSudo } from '@lblod/mu-auth-sudo';
 import config from "../config";
 
 export interface FileMeta {
@@ -55,7 +54,7 @@ const createFile = async function (
     }
   }`;
   if (viaJob) {
-    await updateSudo(q);
+    await update(q, { sudo: true });
   } else {
     await update(q);
   }
